@@ -23,25 +23,25 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
+        python-version: ['3.12', '3.13']
         include:
           - os: linux-intel
             runs-on: ubuntu-latest
           - os: linux-arm
             runs-on: ubuntu-24.04-arm
           - os: macos-intel
-            # macos-15-intel is the last x86_64 runner
             runs-on: macos-15-intel
           - os: macos-arm
-            # macos-14+ (including latest) are ARM64 runners
             runs-on: macos-latest
           - os: ios
             runs-on: macos-latest
             platform: ios
-          - os: pyodide
-            runs-on: ubuntu-latest
-            platform: pyodide
     steps:
       - uses: actions/checkout@v5
+      - name: Set up Python ${{ matrix.python-version }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.0
         env:
