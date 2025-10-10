@@ -24,18 +24,32 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.12', '3.13']
+        os: [linux-intel, linux-arm, macos-intel, macos-arm, ios]
         include:
           - os: linux-intel
+            python-version: 3.12
             runs-on: ubuntu-latest
           - os: linux-arm
+            python-version: 3.12
             runs-on: ubuntu-24.04-arm
           - os: macos-intel
+            python-version: 3.12
             runs-on: macos-15-intel
           - os: macos-arm
+            python-version: 3.12
             runs-on: macos-latest
-          - os: ios
+          - os: linux-intel
+            python-version: 3.13
+            runs-on: ubuntu-latest
+          - os: linux-arm
+            python-version: 3.13
+            runs-on: ubuntu-24.04-arm
+          - os: macos-intel
+            python-version: 3.13
+            runs-on: macos-15-intel
+          - os: macos-arm
+            python-version: 3.13
             runs-on: macos-latest
-            platform: ios
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
