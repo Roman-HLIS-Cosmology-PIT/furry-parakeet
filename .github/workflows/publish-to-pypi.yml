@@ -20,6 +20,9 @@ jobs:
   deploy:
 
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/furry-parakeet
     permissions:
       id-token: write
     steps:
