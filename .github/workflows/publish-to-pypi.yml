@@ -23,8 +23,6 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
-        python-version: ['3.12', '3.13']
-        os: [linux-intel, linux-arm, macos-intel, macos-arm, ios]
         include:
           - os: linux-intel
             python-version: 3.12
