@@ -57,10 +57,10 @@ jobs:
       - name: Install OpenMP-enabled Clang
         if: ${{ runner.os == 'macos-intel' || runner.os == 'macos-arm' }}
         run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
           brew install llvm libomp
           echo "CC=/usr/local/opt/llvm/bin/clang" >> $GITHUB_ENV
           echo "CXX=/usr/local/opt/llvm/bin/clang++" >> $GITHUB_ENV
-          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
       - name: Build wheels pypa step on ${{ matrix.os }} Python ${{ matrix.python-version }}
         uses: pypa/cibuildwheel@v3.2.0
         env:
