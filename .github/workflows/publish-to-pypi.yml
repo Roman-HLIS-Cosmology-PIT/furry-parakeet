@@ -44,10 +44,6 @@ jobs:
             runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v5
-      - name: Update
-        run: |
-          pip install --upgrade setuptools
-          pip install --upgrade auditwheel
       - name: Install OpenMP-enabled Clang
         if: matrix.os == 'macos-intel'
         run: |
@@ -59,6 +55,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Clean build artifacts
+        run: rm -rf build dist
       - name: Build wheels pypa step on ${{ matrix.os }} Python ${{ matrix.python-version }}
         uses: pypa/cibuildwheel@v3.2.0
         env:
