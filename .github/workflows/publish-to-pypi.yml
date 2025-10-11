@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install OpenMP-enabled Clang
-        if: ${{ (runner.os == 'macos-intel') || (runner.os == 'macos-arm') }}
+        if: ${{ (matrix.os == 'macos-intel') || (matrix.os == 'macos-arm') }}
         run: |
           brew install llvm libomp
           echo "CC=/usr/local/opt/llvm/bin/clang" >> $GITHUB_ENV
