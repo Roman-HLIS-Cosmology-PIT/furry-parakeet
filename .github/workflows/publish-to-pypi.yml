@@ -44,6 +44,10 @@ jobs:
             runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v5
+      - name: Update
+        run: |
+          pip install --upgrade setuptools
+          pip install --upgrade auditwheel
       - name: Install OpenMP-enabled Clang
         if: matrix.os == 'macos-intel'
         run: |
