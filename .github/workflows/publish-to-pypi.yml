@@ -50,9 +50,6 @@ jobs:
             runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Set development target 
-        if: ${{ runner.os == 'macos-intel' || runner.os == 'macos-arm' }}
-        run: echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
       - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
         uses: actions/setup-python@v5
         with:
