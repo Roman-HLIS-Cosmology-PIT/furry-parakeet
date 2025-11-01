@@ -52,7 +52,7 @@ jobs:
           echo "CC=/usr/local/opt/llvm/bin/clang" >> $GITHUB_ENV
           echo "CXX=/usr/local/opt/llvm/bin/clang++" >> $GITHUB_ENV
       - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Clean build artifacts
