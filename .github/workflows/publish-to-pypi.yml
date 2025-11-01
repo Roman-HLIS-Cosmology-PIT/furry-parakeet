@@ -58,7 +58,7 @@ jobs:
       - name: Clean build artifacts
         run: rm -rf build dist
       - name: Build wheels pypa step on ${{ matrix.os }} Python ${{ matrix.python-version }}
-        uses: pypa/cibuildwheel@v3.2.0
+        uses: pypa/cibuildwheel@v3.2.1
         env:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
