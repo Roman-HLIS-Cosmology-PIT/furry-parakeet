@@ -155,6 +155,8 @@ static PyObject *pyimcom_lakernel1(PyObject *self, PyObject *args) {
 
 }
 
+/* === 10x10 INTERPOLATION KERNELS === */
+
 /* 2D, 10x10 kernel interpolation for high accuracy
  * Can interpolate multiple functions at a time from the same grid
  * so we don't have to keep recomputing weights.
@@ -586,6 +588,441 @@ static PyObject *pyimcom_gridD5512C(PyObject *self, PyObject *args) {
         for(i=0;i<10;i++) {
           interp_vstrip = 0.;
           for(j=0;j<10;j++) interp_vstrip += wx[j]*L2[j];
+          out += interp_vstrip*wy[i];
+          L2 += ngx;
+        }
+        *(double*)PyArray_GETPTR2(fhatout_, i_in, ipos++) = out;
+      }
+    }
+  } /* end i_in loop */
+
+  /* deallocate arrays */
+  free((char*)wx_ar);
+  free((char*)wy_ar);
+  free((char*)xi);
+  free((char*)yi);
+
+  Py_DECREF(infunc_);
+  Py_DECREF(xpos_);
+  Py_DECREF(ypos_);
+  PyArray_ResolveWritebackIfCopy(fhatout_);
+  Py_DECREF(fhatout_);
+
+  Py_INCREF(Py_None);
+  return(Py_None);
+  /* -- this is the end of the function if it executed normally -- */
+}
+
+/* === 8x8 INTERPOLATION KERNELS === */
+
+/* 2D, 8x8 kernel interpolation for high accuracy
+ * Can interpolate multiple functions at a time from the same grid
+ * so we don't have to keep recomputing weights.
+ * 
+ * Inputs:
+ *   infunc = input function on some grid, shape =(nlayer,ngy,ngx)
+ *   xpos = input x values, shape=(nout,)
+ *   ypos = input y values, shape=(nout,)
+ *
+ * Outputs:
+ * > fhatout = location to put the output values, shape=(nlayer,nout)
+ */
+static PyObject *pyimcom_iG4460C(PyObject *self, PyObject *args) {
+
+  int i,j;
+  long nlayer, nout, ngy, ngx, ipos, ilayer;
+  double x, y, xfh, yfh; long xi, yi; /* frac and integer parts of abscissae; note 'xfh' and 'yfh' will have 1/2 subtracted */
+  double wx[8], wy[8];
+  double e_,o_,xfh2,yfh2;
+  double interp_vstrip, out;
+  double *locdata, *L2;
+
+  /* Input/output arrays */
+  PyObject *infunc, *xpos, *ypos, *fhatout;
+  PyArrayObject *infunc_, *xpos_, *ypos_, *fhatout_;
+
+  /* read arguments */
+  if (!PyArg_ParseTuple(args, "O!O!O!O!", &PyArray_Type, &infunc, &PyArray_Type, &xpos, &PyArray_Type, &ypos,
+    &PyArray_Type, &fhatout)) {
+
+    return(NULL);
+  }
+  /* ... and repackage into C objects */
+  infunc_ = (PyArrayObject*)PyArray_FROM_OTF(infunc, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  xpos_ = (PyArrayObject*)PyArray_FROM_OTF(xpos, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  ypos_ = (PyArrayObject*)PyArray_FROM_OTF(ypos, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  fhatout_ = (PyArrayObject*)PyArray_FROM_OTF(fhatout, NPY_DOUBLE, NPY_ARRAY_INOUT_ARRAY2);
+
+  /* extract dimensions */
+  nlayer = infunc_->dimensions[0];
+  ngy = infunc_->dimensions[1];
+  ngx = infunc_->dimensions[2];
+  nout = xpos_->dimensions[0];
+
+  /* get local data */
+  locdata = (double*)PyArray_DATA(infunc_);
+
+  /* loop over points to interpolate */
+  #pragma omp parallel for private(x,y,xi,yi,xfh,yfh,xfh2,yfh2,e_,o_,wx,wy,ilayer,out,L2,interp_vstrip)
+  for(ipos=0;ipos<nout;ipos++) {
+    x = *(double*)PyArray_GETPTR1(xpos_,ipos);
+    y = *(double*)PyArray_GETPTR1(ypos_,ipos);
+    xi = (long)floor(x);
+    yi = (long)floor(y);
+    xfh = x-xi-.5;
+    yfh = y-yi-.5;
+    if (xi<3 || xi>=ngx-4 || yi<3 || yi>=ngy-4) continue; /* point off the grid, don't interpolate */
+
+    /* -- begin interpolation code written by python --*/
+    xfh2 = xfh*xfh;
+    e_ =  (( 1.090241015907705748E-03*xfh2-8.346150277012355859E-03)*xfh2+1.489357881497986071E-02)*xfh2-3.218793564129918301E-03;
+    o_ = (((-2.810791914341332991E-04*xfh2+2.215914661693180968E-03)*xfh2-3.986572101005442584E-03)*xfh2+8.625400315852317906E-04)*xfh;
+    wx[0] = e_ + o_;
+    wx[7] = e_ - o_;
+    e_ =  ((-5.365623477277001695E-03*xfh2+6.207662245188737965E-02)*xfh2-1.257688787584933243E-01)*xfh2+2.764626022703594449E-02;
+    o_ = ((( 1.949836954158683851E-03*xfh2-2.374248828326114974E-02)*xfh2+4.857459045472510561E-02)*xfh2-1.069020701233798672E-02)*xfh;
+    wx[1] = e_ + o_;
+    wx[6] = e_ - o_;
+    e_ =  (( 9.557928923242215574E-03*xfh2-1.361672168169716368E-01)*xfh2+5.379680265947927031E-01)*xfh2-1.261308835258499739E-01;
+    o_ = (((-5.814593901233612756E-03*xfh2+8.769262184610496225E-02)*xfh2-3.537324186515616309E-01)*xfh2+8.304316504950222388E-02)*xfh;
+    wx[2] = e_ + o_;
+    wx[5] = e_ - o_;
+    e_ =  ((-5.282543715465623166E-03*xfh2+8.243672901563993405E-02)*xfh2-4.270927015819955264E-01)*xfh2+6.017034115294895846E-01;
+    o_ = ((( 9.662150705170477125E-03*xfh2-1.598768234801794252E-01)*xfh2+8.462303031151944266E-01)*xfh2-1.201716239188013402E+00)*xfh;
+    wx[3] = e_ + o_;
+    wx[4] = e_ - o_;
+    yfh2 = yfh*yfh;
+    e_ =  (( 1.090241015907705748E-03*yfh2-8.346150277012355859E-03)*yfh2+1.489357881497986071E-02)*yfh2-3.218793564129918301E-03;
+    o_ = (((-2.810791914341332991E-04*yfh2+2.215914661693180968E-03)*yfh2-3.986572101005442584E-03)*yfh2+8.625400315852317906E-04)*yfh;
+    wy[0] = e_ + o_;
+    wy[7] = e_ - o_;
+    e_ =  ((-5.365623477277001695E-03*yfh2+6.207662245188737965E-02)*yfh2-1.257688787584933243E-01)*yfh2+2.764626022703594449E-02;
+    o_ = ((( 1.949836954158683851E-03*yfh2-2.374248828326114974E-02)*yfh2+4.857459045472510561E-02)*yfh2-1.069020701233798672E-02)*yfh;
+    wy[1] = e_ + o_;
+    wy[6] = e_ - o_;
+    e_ =  (( 9.557928923242215574E-03*yfh2-1.361672168169716368E-01)*yfh2+5.379680265947927031E-01)*yfh2-1.261308835258499739E-01;
+    o_ = (((-5.814593901233612756E-03*yfh2+8.769262184610496225E-02)*yfh2-3.537324186515616309E-01)*yfh2+8.304316504950222388E-02)*yfh;
+    wy[2] = e_ + o_;
+    wy[5] = e_ - o_;
+    e_ =  ((-5.282543715465623166E-03*yfh2+8.243672901563993405E-02)*yfh2-4.270927015819955264E-01)*yfh2+6.017034115294895846E-01;
+    o_ = ((( 9.662150705170477125E-03*yfh2-1.598768234801794252E-01)*yfh2+8.462303031151944266E-01)*yfh2-1.201716239188013402E+00)*yfh;
+    wy[3] = e_ + o_;
+    wy[4] = e_ - o_;
+    /* -- end interpolation code written by python --*/
+
+    /* and the outputs */
+    for(ilayer=0;ilayer<nlayer;ilayer++) {
+      out = 0.;
+      L2 = locdata + (ngy*ilayer + yi-3)*ngx + xi-3;
+      for(i=0;i<8;i++) {
+        interp_vstrip = 0.;
+        for(j=0;j<8;j++) interp_vstrip += wx[j]*L2[j];
+        out += interp_vstrip*wy[i];
+        L2 += ngx; /* jump to next row of input image */
+      }
+      *(double*)PyArray_GETPTR2(fhatout_, ilayer, ipos) = out;
+    }
+  }
+
+  Py_DECREF(infunc_);
+  Py_DECREF(xpos_);
+  Py_DECREF(ypos_);
+  PyArray_ResolveWritebackIfCopy(fhatout_);
+  Py_DECREF(fhatout_);
+
+  Py_INCREF(Py_None);
+  return(Py_None);
+  /* -- this is the end of the function if it executed normally -- */
+}
+
+/* 2D, 8x8 kernel interpolation for high accuracy
+ * Can interpolate multiple functions at a time from the same grid
+ * so we don't have to keep recomputing weights.
+ *
+ * This version assumes the output is symmetrical as a sqrt nout x sqrt nout matrix
+ * 
+ * Inputs:
+ *   infunc = input function on some grid, shape =(nlayer,ngy,ngx)
+ *   xpos = input x values, shape=(nout,)
+ *   ypos = input y values, shape=(nout,)
+ *
+ * Outputs:
+ * > fhatout = location to put the output values, shape=(nlayer,nout)
+ */
+static PyObject *pyimcom_iG4460C_sym(PyObject *self, PyObject *args) {
+
+  int i,j;
+  long nlayer, nout, ngy, ngx, ipos, ilayer;
+  double x, y, xfh, yfh; long xi, yi; /* frac and integer parts of abscissae; note 'xfh' and 'yfh' will have 1/2 subtracted */
+  double wx[8], wy[8];
+  double e_,o_,xfh2,yfh2;
+  double interp_vstrip, out;
+  double *locdata, *L2;
+  long sqnout, ipos1, ipos2, ipos_sym;
+
+  /* Input/output arrays */
+  PyObject *infunc, *xpos, *ypos, *fhatout;
+  PyArrayObject *infunc_, *xpos_, *ypos_, *fhatout_;
+
+  /* read arguments */
+  if (!PyArg_ParseTuple(args, "O!O!O!O!", &PyArray_Type, &infunc, &PyArray_Type, &xpos, &PyArray_Type, &ypos,
+    &PyArray_Type, &fhatout)) {
+
+    return(NULL);
+  }
+  /* ... and repackage into C objects */
+  infunc_ = (PyArrayObject*)PyArray_FROM_OTF(infunc, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  xpos_ = (PyArrayObject*)PyArray_FROM_OTF(xpos, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  ypos_ = (PyArrayObject*)PyArray_FROM_OTF(ypos, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  fhatout_ = (PyArrayObject*)PyArray_FROM_OTF(fhatout, NPY_DOUBLE, NPY_ARRAY_INOUT_ARRAY2);
+
+  /* extract dimensions */
+  nlayer = infunc_->dimensions[0];
+  ngy = infunc_->dimensions[1];
+  ngx = infunc_->dimensions[2];
+  nout = xpos_->dimensions[0];
+  sqnout = (long)floor(sqrt(nout+1));
+
+  /* get local data */
+  locdata = (double*)PyArray_DATA(infunc_);
+
+  /* loop over points to interpolate, but in this function only the upper half triangle */
+  #pragma omp parallel for private(x,y,xi,yi,xfh,yfh,xfh2,yfh2,e_,o_,wx,wy,ilayer,out,L2,interp_vstrip,ipos,ipos2)
+  for(ipos1=0;ipos1<sqnout;ipos1++) {
+  for(ipos2=ipos1;ipos2<sqnout;ipos2++) {
+    ipos = ipos1*sqnout+ipos2;
+    x = *(double*)PyArray_GETPTR1(xpos_,ipos);
+    y = *(double*)PyArray_GETPTR1(ypos_,ipos);
+    xi = (long)floor(x);
+    yi = (long)floor(y);
+    xfh = x-xi-.5;
+    yfh = y-yi-.5;
+    if (xi<3 || xi>=ngx-4 || yi<3 || yi>=ngy-4) continue; /* point off the grid, don't interpolate */
+
+    /* -- begin interpolation code written by python --*/
+    xfh2 = xfh*xfh;
+    e_ =  (( 1.090241015907705748E-03*xfh2-8.346150277012355859E-03)*xfh2+1.489357881497986071E-02)*xfh2-3.218793564129918301E-03;
+    o_ = (((-2.810791914341332991E-04*xfh2+2.215914661693180968E-03)*xfh2-3.986572101005442584E-03)*xfh2+8.625400315852317906E-04)*xfh;
+    wx[0] = e_ + o_;
+    wx[7] = e_ - o_;
+    e_ =  ((-5.365623477277001695E-03*xfh2+6.207662245188737965E-02)*xfh2-1.257688787584933243E-01)*xfh2+2.764626022703594449E-02;
+    o_ = ((( 1.949836954158683851E-03*xfh2-2.374248828326114974E-02)*xfh2+4.857459045472510561E-02)*xfh2-1.069020701233798672E-02)*xfh;
+    wx[1] = e_ + o_;
+    wx[6] = e_ - o_;
+    e_ =  (( 9.557928923242215574E-03*xfh2-1.361672168169716368E-01)*xfh2+5.379680265947927031E-01)*xfh2-1.261308835258499739E-01;
+    o_ = (((-5.814593901233612756E-03*xfh2+8.769262184610496225E-02)*xfh2-3.537324186515616309E-01)*xfh2+8.304316504950222388E-02)*xfh;
+    wx[2] = e_ + o_;
+    wx[5] = e_ - o_;
+    e_ =  ((-5.282543715465623166E-03*xfh2+8.243672901563993405E-02)*xfh2-4.270927015819955264E-01)*xfh2+6.017034115294895846E-01;
+    o_ = ((( 9.662150705170477125E-03*xfh2-1.598768234801794252E-01)*xfh2+8.462303031151944266E-01)*xfh2-1.201716239188013402E+00)*xfh;
+    wx[3] = e_ + o_;
+    wx[4] = e_ - o_;
+    yfh2 = yfh*yfh;
+    e_ =  (( 1.090241015907705748E-03*yfh2-8.346150277012355859E-03)*yfh2+1.489357881497986071E-02)*yfh2-3.218793564129918301E-03;
+    o_ = (((-2.810791914341332991E-04*yfh2+2.215914661693180968E-03)*yfh2-3.986572101005442584E-03)*yfh2+8.625400315852317906E-04)*yfh;
+    wy[0] = e_ + o_;
+    wy[7] = e_ - o_;
+    e_ =  ((-5.365623477277001695E-03*yfh2+6.207662245188737965E-02)*yfh2-1.257688787584933243E-01)*yfh2+2.764626022703594449E-02;
+    o_ = ((( 1.949836954158683851E-03*yfh2-2.374248828326114974E-02)*yfh2+4.857459045472510561E-02)*yfh2-1.069020701233798672E-02)*yfh;
+    wy[1] = e_ + o_;
+    wy[6] = e_ - o_;
+    e_ =  (( 9.557928923242215574E-03*yfh2-1.361672168169716368E-01)*yfh2+5.379680265947927031E-01)*yfh2-1.261308835258499739E-01;
+    o_ = (((-5.814593901233612756E-03*yfh2+8.769262184610496225E-02)*yfh2-3.537324186515616309E-01)*yfh2+8.304316504950222388E-02)*yfh;
+    wy[2] = e_ + o_;
+    wy[5] = e_ - o_;
+    e_ =  ((-5.282543715465623166E-03*yfh2+8.243672901563993405E-02)*yfh2-4.270927015819955264E-01)*yfh2+6.017034115294895846E-01;
+    o_ = ((( 9.662150705170477125E-03*yfh2-1.598768234801794252E-01)*yfh2+8.462303031151944266E-01)*yfh2-1.201716239188013402E+00)*yfh;
+    wy[3] = e_ + o_;
+    wy[4] = e_ - o_;
+    /* -- end interpolation code written by python --*/
+
+    /* and the outputs */
+    for(ilayer=0;ilayer<nlayer;ilayer++) {
+      out = 0.;
+      L2 = locdata + (ngy*ilayer + yi-3)*ngx + xi-3;
+      for(i=0;i<8;i++) {
+        interp_vstrip = 0.;
+        for(j=0;j<8;j++) interp_vstrip += wx[j]*L2[j];
+        out += interp_vstrip*wy[i];
+        L2 += ngx; /* jump to next row of input image */
+      }
+      *(double*)PyArray_GETPTR2(fhatout_, ilayer, ipos) = out;
+    }
+  }}
+
+  /* ... and now fill in the lower half triangle */
+  for(ipos1=1;ipos1<sqnout;ipos1++) for(ipos2=0;ipos2<ipos1;ipos2++) {
+    ipos = ipos1*sqnout+ipos2;
+    ipos_sym = ipos2*sqnout+ipos1;
+    for(ilayer=0;ilayer<nlayer;ilayer++)
+      *(double*)PyArray_GETPTR2(fhatout_, ilayer, ipos) = *(double*)PyArray_GETPTR2(fhatout_, ilayer, ipos_sym);
+  }
+
+  Py_DECREF(infunc_);
+  Py_DECREF(xpos_);
+  Py_DECREF(ypos_);
+  PyArray_ResolveWritebackIfCopy(fhatout_);
+  Py_DECREF(fhatout_);
+
+  Py_INCREF(Py_None);
+  return(Py_None);
+  /* -- this is the end of the function if it executed normally -- */
+}
+
+/* 2D, 8x8 kernel interpolation for high accuracy
+ * this version works with output points on a rectangular grid so that the same
+ * weights in x and y can be used for many output points
+ *
+ * Inputs:
+ *   infunc = input function on some grid, shape =(ngy,ngx)
+ *   xpos = input x values, shape=(npi,nxo)
+ *   ypos = input y values, shape=(npi,nyo)
+ *
+ * Outputs:
+ * > fhatout = location to put the output values, shape=(npi,nyo*nxo)
+ *
+ * Notes:
+ * there are npi*nyo*nxo interpolations to be done in total
+ * but for each input pixel npi, there is an nyo x nxo grid of output points
+ */
+static PyObject *pyimcom_gridG4460C(PyObject *self, PyObject *args) {
+
+  int i, j;
+  long i_in, iy, ix, ipos;
+  double **wx_ar, **wy_ar;
+  double x, y;
+  double xfh, yfh, *wx, *wy;
+  long *xi, *yi; /* frac and integer parts of abscissae; note 'xfh' and 'yfh' will have 1/2 subtracted */
+  long yip,xip;
+  long ngy,ngx,npi,nxo,nyo;
+  double xfh2, yfh2, e_, o_;
+  double out, interp_vstrip;
+  double *locdata, *L2;
+
+  /* Input/output arrays */
+  PyObject *infunc, *xpos, *ypos, *fhatout;
+  PyArrayObject *infunc_, *xpos_, *ypos_, *fhatout_;
+
+  /* read arguments */
+  if (!PyArg_ParseTuple(args, "O!O!O!O!", &PyArray_Type, &infunc, &PyArray_Type, &xpos, &PyArray_Type, &ypos,
+    &PyArray_Type, &fhatout)) {
+
+    return(NULL);
+  }
+  /* ... and repackage into C objects */
+  infunc_ = (PyArrayObject*)PyArray_FROM_OTF(infunc, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  xpos_ = (PyArrayObject*)PyArray_FROM_OTF(xpos, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  ypos_ = (PyArrayObject*)PyArray_FROM_OTF(ypos, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  fhatout_ = (PyArrayObject*)PyArray_FROM_OTF(fhatout, NPY_DOUBLE, NPY_ARRAY_INOUT_ARRAY2);
+
+  /* extract dimensions */
+  ngy = infunc_->dimensions[0];
+  ngx = infunc_->dimensions[1];
+  npi = xpos_->dimensions[0];
+  nxo = xpos_->dimensions[1];
+  nyo = ypos_->dimensions[1];
+
+  /* get local data */
+  locdata = (double*)PyArray_DATA(infunc_);
+
+  /* allocate arrays */
+  wx_ar = (double**)malloc((size_t)(nxo*sizeof(double*) + 8*nxo*sizeof(double)));
+  if (wx_ar==NULL) {
+    PyErr_SetString(PyExc_TypeError, "Memory allocation failed in pyimcom_lakernel1");
+    return((PyObject*)NULL);
+  }
+  for(ix=0;ix<nxo;ix++) wx_ar[ix] = (double*)(wx_ar+nxo) + 8*ix;
+  wy_ar = (double**)malloc((size_t)(nyo*sizeof(double*) + 8*nyo*sizeof(double)));
+  if (wy_ar==NULL) {
+    PyErr_SetString(PyExc_TypeError, "Memory allocation failed in pyimcom_lakernel1");
+    return((PyObject*)NULL);
+  }
+  for(iy=0;iy<nyo;iy++) wy_ar[iy] = (double*)(wy_ar+nyo) + 8*iy;
+  xi = (long*)malloc((size_t)(nxo*sizeof(long)));
+  yi = (long*)malloc((size_t)(nyo*sizeof(long)));
+  if (xi==NULL || yi==NULL) {
+    PyErr_SetString(PyExc_TypeError, "Memory allocation failed in pyimcom_lakernel1");
+    return((PyObject*)NULL);
+  }
+
+  /* loop over points to interpolate */
+  for(i_in=0;i_in<npi;i_in++) {
+
+    /* get the interpolation weights -- first in x, then in y.
+     * do all the output points simultaneously to save time
+     */
+    for(ix=0;ix<nxo;ix++) {
+      wx = wx_ar[ix];
+      x = *(double*)PyArray_GETPTR2(xpos_,i_in,ix);
+      xi[ix] = (long)floor(x);
+      xfh = x-xi[ix]-.5;
+      if (xi[ix]<3 || xi[ix]>=ngx-4) { /* point off the grid, don't interpolate */
+        xi[ix]=3;
+        for(j=0;j<10;j++) wx[j] = 0.;
+        continue;
+      }
+      /* -- begin interpolation code written by python --*/
+      xfh2 = xfh*xfh;
+      e_ =  (( 1.090241015907705748E-03*xfh2-8.346150277012355859E-03)*xfh2+1.489357881497986071E-02)*xfh2-3.218793564129918301E-03;
+      o_ = (((-2.810791914341332991E-04*xfh2+2.215914661693180968E-03)*xfh2-3.986572101005442584E-03)*xfh2+8.625400315852317906E-04)*xfh;
+      wx[0] = e_ + o_;
+      wx[7] = e_ - o_;
+      e_ =  ((-5.365623477277001695E-03*xfh2+6.207662245188737965E-02)*xfh2-1.257688787584933243E-01)*xfh2+2.764626022703594449E-02;
+      o_ = ((( 1.949836954158683851E-03*xfh2-2.374248828326114974E-02)*xfh2+4.857459045472510561E-02)*xfh2-1.069020701233798672E-02)*xfh;
+      wx[1] = e_ + o_;
+      wx[6] = e_ - o_;
+      e_ =  (( 9.557928923242215574E-03*xfh2-1.361672168169716368E-01)*xfh2+5.379680265947927031E-01)*xfh2-1.261308835258499739E-01;
+      o_ = (((-5.814593901233612756E-03*xfh2+8.769262184610496225E-02)*xfh2-3.537324186515616309E-01)*xfh2+8.304316504950222388E-02)*xfh;
+      wx[2] = e_ + o_;
+      wx[5] = e_ - o_;
+      e_ =  ((-5.282543715465623166E-03*xfh2+8.243672901563993405E-02)*xfh2-4.270927015819955264E-01)*xfh2+6.017034115294895846E-01;
+      o_ = ((( 9.662150705170477125E-03*xfh2-1.598768234801794252E-01)*xfh2+8.462303031151944266E-01)*xfh2-1.201716239188013402E+00)*xfh;
+      wx[3] = e_ + o_;
+      wx[4] = e_ - o_;
+    /* -- end interpolation code written by python --*/
+    }
+    /* ... and now in y */
+    for(iy=0;iy<nyo;iy++) {
+      wy = wy_ar[iy];
+      y = *(double*)PyArray_GETPTR2(ypos_,i_in,iy);
+      yi[iy] = (long)floor(y);
+      yfh = y-yi[iy]-.5;
+      if (yi[iy]<3 || yi[iy]>=ngy-4) { /* point off the grid, don't interpolate */
+        yi[iy]=3;
+        for(j=0;j<10;j++) wy[j] = 0.;
+        continue;
+      }
+      /* interpolation weights */
+      yfh2 = yfh*yfh;
+      e_ =  (( 1.090241015907705748E-03*yfh2-8.346150277012355859E-03)*yfh2+1.489357881497986071E-02)*yfh2-3.218793564129918301E-03;
+      o_ = (((-2.810791914341332991E-04*yfh2+2.215914661693180968E-03)*yfh2-3.986572101005442584E-03)*yfh2+8.625400315852317906E-04)*yfh;
+      wy[0] = e_ + o_;
+      wy[7] = e_ - o_;
+      e_ =  ((-5.365623477277001695E-03*yfh2+6.207662245188737965E-02)*yfh2-1.257688787584933243E-01)*yfh2+2.764626022703594449E-02;
+      o_ = ((( 1.949836954158683851E-03*yfh2-2.374248828326114974E-02)*yfh2+4.857459045472510561E-02)*yfh2-1.069020701233798672E-02)*yfh;
+      wy[1] = e_ + o_;
+      wy[6] = e_ - o_;
+      e_ =  (( 9.557928923242215574E-03*yfh2-1.361672168169716368E-01)*yfh2+5.379680265947927031E-01)*yfh2-1.261308835258499739E-01;
+      o_ = (((-5.814593901233612756E-03*yfh2+8.769262184610496225E-02)*yfh2-3.537324186515616309E-01)*yfh2+8.304316504950222388E-02)*yfh;
+      wy[2] = e_ + o_;
+      wy[5] = e_ - o_;
+      e_ =  ((-5.282543715465623166E-03*yfh2+8.243672901563993405E-02)*yfh2-4.270927015819955264E-01)*yfh2+6.017034115294895846E-01;
+      o_ = ((( 9.662150705170477125E-03*yfh2-1.598768234801794252E-01)*yfh2+8.462303031151944266E-01)*yfh2-1.201716239188013402E+00)*yfh;
+      wy[3] = e_ + o_;
+      wy[4] = e_ - o_;
+    }
+
+    /* ... and now we can do the interpolation */
+    ipos=0;
+    for(iy=0;iy<nyo;iy++) { /* output pixel row */
+      wy = wy_ar[iy];
+      for(ix=0;ix<nxo;ix++) { /* output pixel column */
+        wx = wx_ar[ix];
+        out = 0.;
+        L2 = locdata + (yi[iy]-3)*ngx + xi[ix]-3;
+        for(i=0;i<8;i++) {
+          interp_vstrip = 0.;
+          for(j=0;j<8;j++) interp_vstrip += wx[j]*L2[j];
           out += interp_vstrip*wy[i];
           L2 += ngx;
         }
@@ -1190,6 +1627,9 @@ static PyMethodDef PyImcom_CMethods[] = {
   {"iD5512C", (PyCFunction)pyimcom_iD5512C, METH_VARARGS, "interpolation routine"},
   {"iD5512C_sym", (PyCFunction)pyimcom_iD5512C_sym, METH_VARARGS, "interpolation routine"},
   {"gridD5512C", (PyCFunction)pyimcom_gridD5512C, METH_VARARGS, "interpolation routine regular grid"},
+  {"iG4460C", (PyCFunction)pyimcom_iG4460C, METH_VARARGS, "interpolation routine"},
+  {"iG4460C_sym", (PyCFunction)pyimcom_iG4460C_sym, METH_VARARGS, "interpolation routine"},
+  {"gridG4460C", (PyCFunction)pyimcom_gridG4460C, METH_VARARGS, "interpolation routine regular grid"},
   {"build_reduced_T_wrap", (PyCFunction)pyimcom_build_reduced_T_wrap, METH_VARARGS, "fast approximate coadd matrix"},
   {"bilinear_interpolation", (PyCFunction)bilinear_interpolation, METH_VARARGS, "Interpolate image B onto image A"},
   {"bilinear_transpose", (PyCFunction)bilinear_transpose, METH_VARARGS, "Transpose interpolation"},
