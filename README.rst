@@ -29,7 +29,7 @@ Helpful information
 
 There are `interface instructions <docs/interface_instructions.rst>`_ if you are interested in how ``furry-parakeet`` can interface with other tools in the Roman ecosystem.
 
-You can also look at the `readthedocs page <https://furry-parakeet.readthedocs.io/en/latest/>`_.
+You can also look at the `readthedocs page <https://furry-parakeet.readthedocs.io/en/latest/>`_ for the Python routines, and the `C routines page <docs/croutines.rst>`_ for the C routines that are wrapped into Python.
 
 Links
 =====
