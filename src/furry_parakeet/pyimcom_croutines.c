@@ -958,7 +958,7 @@ static PyObject *pyimcom_gridG4460C(PyObject *self, PyObject *args) {
       xfh = x-xi[ix]-.5;
       if (xi[ix]<3 || xi[ix]>=ngx-4) { /* point off the grid, don't interpolate */
         xi[ix]=3;
-        for(j=0;j<10;j++) wx[j] = 0.;
+        for(j=0;j<8;j++) wx[j] = 0.;
         continue;
       }
       /* -- begin interpolation code written by python --*/
@@ -989,7 +989,7 @@ static PyObject *pyimcom_gridG4460C(PyObject *self, PyObject *args) {
       yfh = y-yi[iy]-.5;
       if (yi[iy]<3 || yi[iy]>=ngy-4) { /* point off the grid, don't interpolate */
         yi[iy]=3;
-        for(j=0;j<10;j++) wy[j] = 0.;
+        for(j=0;j<8;j++) wy[j] = 0.;
         continue;
       }
       /* interpolation weights */
