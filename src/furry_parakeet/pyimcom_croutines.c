@@ -1073,7 +1073,7 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
     PyArrayObject *interpolated_image_; /*outputs*/
 
       /* read arguments */
-    if (!PyArg_ParseTuple(args, "O!O!iiO!iO!", &PyArray_Type, &image, &PyArray_Type, &g_eff, &rows, &cols,
+    if (!PyArg_ParseTuple(args, "O!O!llO!lO!", &PyArray_Type, &image, &PyArray_Type, &g_eff, &rows, &cols,
     &PyArray_Type, &coords, &num_coords, &PyArray_Type, &interpolated_image)) {
 
     return(NULL);
@@ -1087,7 +1087,7 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
     if (rows <= 0 || cols <= 0) {
         char error_msg[200];
         snprintf(error_msg, sizeof(error_msg),
-                 "Invalid image dimensions: rows=%d, cols=%d", rows, cols);
+                 "Invalid image dimensions: rows=%ld, cols=%ld", rows, cols);
         PyErr_SetString(PyExc_ValueError, error_msg);
         return NULL;
     }
@@ -1187,7 +1187,7 @@ static PyObject *bilinear_transpose (PyObject *self, PyObject *args){
     PyArrayObject *weight_image_;
 
       /* read arguments */
-    if (!PyArg_ParseTuple(args, "O!iiO!iO!", &PyArray_Type, &image, &rows, &cols,
+    if (!PyArg_ParseTuple(args, "O!llO!lO!", &PyArray_Type, &image, &rows, &cols,
     &PyArray_Type, &coords, &num_coords, &PyArray_Type, &original_image)) {
 
     return(NULL);
@@ -1200,7 +1200,7 @@ static PyObject *bilinear_transpose (PyObject *self, PyObject *args){
     if (rows <= 0 || cols <= 0) {
         char error_msg[200];
         snprintf(error_msg, sizeof(error_msg),
-                 "Invalid image dimensions: rows=%d, cols=%d", rows, cols);
+                 "Invalid image dimensions: rows=%ld, cols=%ld", rows, cols);
         PyErr_SetString(PyExc_ValueError, error_msg);
         return NULL;
     }
