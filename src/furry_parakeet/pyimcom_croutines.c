@@ -1122,9 +1122,7 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
          x2 = x1 + 1;
          y2 = y1 + 1;
 
-         if (x1 < 0 || y1 < 0 || x >= cols || y >= rows) continue;  // truly outside
-         x2 = (x1 + 1 < cols) ? (x1 + 1) : (cols - 1);
-         y2 = (y1 + 1 < rows) ? (y1 + 1) : (rows - 1);
+         if (x1 < 0 || y1 < 0 || x2 >= cols || y2 >= rows) continue;  // skip pixel if on edge
 
 
         // Compute fractional distances from x1 and y1
