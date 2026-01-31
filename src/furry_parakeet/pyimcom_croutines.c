@@ -1095,6 +1095,8 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
     /* make local, flattened versions of arrays*/
     double *image_data = (double*)malloc((size_t)(cols*rows*sizeof(double)));
     double *interp_data = (double*)malloc((size_t)(cols*rows*sizeof(double)));
+    memset(interp_data, 0, cols * rows * sizeof(double));
+
 
     #pragma omp parallel for
     for(long yip=0;yip<rows;yip++) {
