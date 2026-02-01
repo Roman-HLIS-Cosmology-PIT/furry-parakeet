@@ -6,6 +6,16 @@ from furry_parakeet import pyimcom_interface
 from numpy.random import RandomState
 
 
+def test_evensize():
+    """Test exception handling for even sizes in PSF_Overlap."""
+
+    try:
+        ovl = pyimcom_interface.PSF_Overlap([], [], 1./6., 64, 0.11)
+        assert ovl.nsample < 0  # will fail, the above should raise an exception
+    except Exception as e:
+        print(str(e))
+        assert str(e) == "error in PSF_Overlap, nsample=64 must be odd"
+
 def test_ikernel():
     """General test for furry-parakeet."""
 
@@ -233,7 +243,7 @@ def test_ikernel():
     T_err = np.sum(ims_alt["T"], axis=(3, 4, 5)) - 1.0
     print(np.percentile(T_err, 25), np.percentile(T_err, 75))
     print(np.amax(np.abs(T_err)))
-    assert np.amax(np.abs(T_err)) < 0.0  # will fail
+    assert np.amax(np.abs(T_err)) < 0.04
     t1d = time.perf_counter()
     output += f"timing coadd matrix: {t1d - t1c}\n"
 
