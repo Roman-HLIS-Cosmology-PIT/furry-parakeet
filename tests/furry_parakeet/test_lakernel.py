@@ -1,7 +1,8 @@
 """Tests for lakernel.py"""
 
-import numpy as np
 import furry_parakeet.pyimcom_lakernel as lk
+import numpy as np
+
 
 def test_get_coadd_matrix_discrete():
     """Test function for get_coadd_matrix_discrete."""
@@ -67,7 +68,14 @@ def test_get_coadd_matrix_discrete():
 
     print("n", n, "m", m, "nt", nt, "nv", np.size(kappa_array))
 
-    (kappa_, Sigma_, UC_, T_) = lk.get_coadd_matrix_discrete(A, mBhalfPoly, C, kappa_array, smax=0.5)
+    (kappa_, Sigma_, UC_, T_) = lk.get_coadd_matrix_discrete(
+        A,
+        mBhalfPoly,
+        C,
+        kappa_array,
+        smax=0.5,
+        ucmin=1.0e-6
+    )
 
     # print information
     # fits.PrimaryHDU(T_).writeto("T.fits", overwrite=True)
@@ -84,6 +92,8 @@ def test_get_coadd_matrix_discrete():
     print(np.amin(UC_), np.amax(UCa_))
     print(np.amin(T_), np.amax(T_))
     print(np.sum(T_, axis=-1))
+
+    assert T_[0, 0] < -300.0
 
 
 def dontusetestkernel(sigma, u):
