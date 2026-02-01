@@ -67,13 +67,7 @@ def test_get_coadd_matrix_discrete():
 
     print("n", n, "m", m, "nt", nt, "nv", np.size(kappa_array))
 
-    t1a = time.perf_counter()
-    print("begin", t1a)
-
-    (kappa_, Sigma_, UC_, T_) = get_coadd_matrix_discrete(A, mBhalfPoly, C, kappa_array, smax=0.5)
-
-    t1b = time.perf_counter()
-    print("get_coadd time", t1b - t1a)
+    (kappa_, Sigma_, UC_, T_) = lk.get_coadd_matrix_discrete(A, mBhalfPoly, C, kappa_array, smax=0.5)
 
     # print information
     # fits.PrimaryHDU(T_).writeto("T.fits", overwrite=True)
@@ -245,4 +239,3 @@ def dontusetestinterp(u):
     print(fout[2, :] - np.cos(2 * np.pi * pred))
 
     print(f"timing interp = {t1b-t1a:9.6f} s")
-  
