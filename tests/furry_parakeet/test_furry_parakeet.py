@@ -182,7 +182,8 @@ def test_ikernel():
     t1a = time.perf_counter()
     P = pyimcom_interface.PSF_Overlap(ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist)
     P2 = pyimcom_interface.PSF_Overlap(
-        ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist, amp_penalty=1.0e-5
+        ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist,
+        amp_penalty={"amp": 1.0e-5, "sig": 0.5}
     )
     t1b = time.perf_counter()
     output += f"timing psf overlap: {t1b - t1a}\n"
@@ -271,7 +272,7 @@ def test_ikernel():
     diff_in_t = np.abs(ims_alt["T"] - ims_alt2["T"])
     print(np.median(diff_in_t), np.amax(diff_in_t))
     assert np.amax(diff_in_t) < -1.0
-    
+
     output += f"number of output x input pixels used: {np.shape(ims["mBhalf"])}\n"
     output += f"C = {ims["C"]}\n"
     output += f"shape of T: {np.shape(ims["T"])}\n"
