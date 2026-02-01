@@ -181,6 +181,9 @@ def test_ikernel():
 
     t1a = time.perf_counter()
     P = pyimcom_interface.PSF_Overlap(ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist)
+    P2 = pyimcom_interface.PSF_Overlap(
+        ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist, amp_penalty=1.0e-5
+    )
     t1b = time.perf_counter()
     output += f"timing psf overlap: {t1b - t1a}\n"
 
@@ -248,6 +251,27 @@ def test_ikernel():
     t1d = time.perf_counter()
     output += f"timing coadd matrix: {t1d - t1c}\n"
 
+    # another alternative, with amp_penalty (hence using P2)
+    ims_alt2 = pyimcom_interface.get_coadd_matrix(
+        P2,
+        float(nps),
+        [uctarget**2],
+        posoffset,
+        mlist,
+        s_in,
+        (ny_in, nx_in),
+        s_out,
+        (ny_out, nx_out),
+        None,
+        extbdy,
+        smax=1.0 / n_in,
+        flat_penalty=flat_penalty,
+        choose_outputs="T",
+    )
+    diff_in_t = np.abs(ims_alt["T"] - ims_alt2["T"])
+    print(np.median(diff_in_t), np.amax(diff_in_t))
+    assert np.amax(diff_in_t) < -1.0
+    
     output += f"number of output x input pixels used: {np.shape(ims["mBhalf"])}\n"
     output += f"C = {ims["C"]}\n"
     output += f"shape of T: {np.shape(ims["T"])}\n"
