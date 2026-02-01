@@ -69,12 +69,7 @@ def test_get_coadd_matrix_discrete():
     print("n", n, "m", m, "nt", nt, "nv", np.size(kappa_array))
 
     (kappa_, Sigma_, UC_, T_) = lk.get_coadd_matrix_discrete(
-        A,
-        mBhalfPoly,
-        C,
-        kappa_array,
-        smax=0.5,
-        ucmin=1.0e-6
+        A, mBhalfPoly, C, kappa_array, smax=0.5, ucmin=1.0e-6
     )
 
     # print information
@@ -89,10 +84,18 @@ def test_get_coadd_matrix_discrete():
     print(np.shape(T_))
     print(np.amin(kappa_), np.amax(kappa_))
     print(np.amin(Sigma_), np.amax(Sigma_))
-    print(np.amin(UC_), np.amax(UCa_))
+    print(np.amin(UC_), np.amax(UC_))
     print(np.amin(T_), np.amax(T_))
     print(np.sum(T_, axis=-1))
 
+    assert np.shape(kappa_) == (3, 2500)
+    assert np.shape(Sigma_) == (3, 2500)
+    assert np.shape(UC_) == (3, 2500)
+    assert np.shape(T_) == (3, 2500, 6400)
+    assert np.amin(kappa_) > 0.005
+    assert np.amax(kappa_) < 0.012
+    assert np.amin(Sigma_) > 0.49
+    assert np.amax(Sigma_) < 0.6
     assert T_[0, 0] < -300.0
 
 
