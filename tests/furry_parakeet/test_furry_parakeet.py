@@ -16,6 +16,7 @@ def test_evensize():
         print(str(e))
         assert str(e) == "error in PSF_Overlap, nsample=64 must be odd"
 
+
 def test_ikernel():
     """General test for furry-parakeet."""
 
