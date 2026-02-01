@@ -203,6 +203,14 @@ def test_kernel():
     print(np.shape(t_err), np.amax(t_err), np.amax(t_err[:npr]))
     assert np.amax(t_err) < 1.0e-3
 
+    # Test for single array
+    (kappa4, Sigma4, UC4, T4) = lk.CKernelMulti(
+        A, mBhalfPoly[0, :, :], C, 1e-8)
+    )
+    err = np.abs(T4 - T3[0, :, :])
+    print(np.amax(err))
+    assert np.amax(err) < -1.0
+
 
 def test_interp():
     """Test interpolation functions on a sine wave."""
