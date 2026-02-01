@@ -3,6 +3,7 @@
 import numpy as np
 from furry_parakeet.pyimcom_interface import psf_gaussian
 
+
 def test_gauss():
     """Test of Gaussian PSF."""
 
@@ -24,4 +25,8 @@ def test_gauss():
 
     print(xmean, ymean, x2mean, y2mean)
 
-    assert im_size < 0.0
+    assert np.abs(im_size - 1.0) < 1.0e-6
+    assert np.abs(xmean) < 1.0e-6
+    assert np.abs(ymean) < 1.0e-6
+    assert np.abs(x2mean - 6.25) < 1.0e-6
+    assert np.abs(y2mean - 9.0) < 1.0e-6
