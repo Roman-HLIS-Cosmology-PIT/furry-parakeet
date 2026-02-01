@@ -96,7 +96,11 @@ def test_get_coadd_matrix_discrete():
     assert np.amax(kappa_) < 0.012
     assert np.amin(Sigma_) > 0.49
     assert np.amax(Sigma_) < 0.6
-    assert T_[0, 0] < -300.0
+    assert np.amin(UC_) > 5.0e-4
+    assert np.amax(UC_) < 0.002
+    T__ = np.sum(T_, axis=-1)
+    print(np.amin(T__), np.amax(T__))
+    assert np.amax(np.abs(T__-1.)) < 0.02
 
 
 def dontusetestkernel(sigma, u):
@@ -167,9 +171,6 @@ def dontusetestkernel(sigma, u):
     mBhalfPoly *= 0.7
     C *= 0.7
 
-    t1a = time.perf_counter()
-    print("kernel, brute force", t1a)
-
     # brute force version of kernel
     (kappa, Sigma, UC, T) = BruteForceKernel(A, mBhalf, C, 1e-8)
 
@@ -179,9 +180,6 @@ def dontusetestkernel(sigma, u):
     print("UC =", UC[:npr])
     print("Image residual =")
     print(np.abs(T @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
-
-    t1b = time.perf_counter()
-    print("kernel, C", t1b)
 
     # C version of kernel
     (kappa2, Sigma2, UC2, T2) = CKernel(A, mBhalf, C, 1e-8)
@@ -193,18 +191,11 @@ def dontusetestkernel(sigma, u):
     print("Image residual =")
     print(np.abs(T2 @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
 
-    t1c = time.perf_counter()
-
     (kappa3, Sigma3, UC3, T3) = CKernelMulti(
         A, mBhalfPoly, C * 1.05 ** (2 * np.array(range(nt))), 1e-8 * np.ones((nt,))
     )
     print("Sigma3 =", Sigma3[:, :npr])
     print("output =", (T2 @ thisImage)[:npr], (T3 @ thisImage)[:, :npr])
-
-    t1d = time.perf_counter()
-    print("end -->", t1d)
-
-    print("timing: ", t1b - t1a, t1c - t1b, t1d - t1c)
 
 
 def dontusetestinterp(u):
@@ -236,10 +227,8 @@ def dontusetestinterp(u):
 
     fout = np.zeros((3, no))
 
-    t1a = time.perf_counter()
     pyimcom_croutines.iD5512C(indata, xout, yout, fout)
     # pyimcom_croutines.iD5512C(indata[2,:,:].reshape((1,ny,nx)), xout, yout, fout[2,:].reshape((1,no)))
-    t1b = time.perf_counter()
 
     pred = u[0] * xout + u[1] * yout
 
@@ -250,5 +239,3 @@ def dontusetestinterp(u):
     print(fout[0, :] - 1)
     print(fout[1, :] - pred)
     print(fout[2, :] - np.cos(2 * np.pi * pred))
-
-    print(f"timing interp = {t1b-t1a:9.6f} s")
