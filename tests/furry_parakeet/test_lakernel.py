@@ -1,8 +1,8 @@
 """Tests for lakernel.py"""
 
-from furry_parakeet import pyimcom_croutines
 import furry_parakeet.pyimcom_lakernel as lk
 import numpy as np
+from furry_parakeet import pyimcom_croutines
 
 
 def test_get_coadd_matrix_discrete():
@@ -112,7 +112,7 @@ def test_kernel():
     # Test parameters
     sigma = 4.0  # The 1 sigma width of PSF (Gaussian)
     u = np.array([0.2, 0.1])  # Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
-    
+
     # number of outputs to print
     npr = 4
 
@@ -181,16 +181,15 @@ def test_kernel():
     print(np.abs(T2 @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
 
     t_err = np.abs(T2 @ thisImage - desiredOutput).reshape((m1, m1))
-    print(np.amax(t_err), np.amax(t_err[:npr]))
-    # assert np.amax(t_err) < -1.0e-4
-    
+    assert np.amax(t_err) < 1.0e-3
+
     (kappa3, Sigma3, UC3, T3) = lk.CKernelMulti(
         A, mBhalfPoly, C * 1.05 ** (2 * np.array(range(nt))), 1e-8 * np.ones((nt,))
     )
     print("Sigma3 =", Sigma3[:, :npr])
     print("output =", (T2 @ thisImage)[:npr], (T3 @ thisImage)[:, :npr])
-    t_err = np.abs(T3 @ thisImage - desiredOutput).reshape((m1, m1))
-    print(np.amax(t_err), np.amax(t_err[:npr]))
+    t_err = np.abs((T3 @ thisImage)[0, :] - desiredOutput).reshape((m1, m1))
+    print(np.shape(t_err), np.amax(t_err), np.amax(t_err[:npr]))
     assert np.amax(t_err) < -1.0e-4
 
 
