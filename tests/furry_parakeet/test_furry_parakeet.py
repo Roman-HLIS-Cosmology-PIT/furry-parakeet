@@ -213,6 +213,25 @@ def test_ikernel():
         flat_penalty=flat_penalty,
         choose_outputs="ABCKMSTU",
     )
+    ims_alt = pyimcom_interface.get_coadd_matrix(
+        P,
+        float(nps),
+        [uctarget**2],
+        posoffset,
+        mlist,
+        s_in,
+        (ny_in, nx_in),
+        s_out,
+        (ny_out, nx_out),
+        None,
+        extbdy,
+        smax=1.0 / n_in,
+        flat_penalty=flat_penalty,
+        choose_outputs="T",
+    )
+    T_err = np.sum(ims_alt["T"], axis=-1) - 1.0
+    print(np.amax(np.abs(T_err)))
+    assert np.amax(np.abs(T_err)) < 0.0  # will fail
     t1d = time.perf_counter()
     output += f"timing coadd matrix: {t1d - t1c}\n"
 
