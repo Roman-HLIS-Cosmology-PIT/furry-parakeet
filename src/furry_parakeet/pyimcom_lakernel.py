@@ -20,12 +20,10 @@ testinterp
 
 """
 
-import time
 import warnings
 
 import numpy as np
 import scipy
-from astropy.io import fits
 from scipy.linalg import LinAlgError
 
 from . import pyimcom_croutines
