@@ -303,9 +303,11 @@ class PSF_Overlap:
         The 2x2 distortion matrices associated with the input PSFs (length ``n_in``),
         in the form ``X(stacking frame) = (distortion_matrix[j]) @ X(native frame[j])``.
         Default is no distortion.
-    amp_penalty : float, optional
+    amp_penalty : dict, optional
         Experimental feature to change the weighting of Fourier modes
        (do not use or set to None unless you are trying to do a test with it).
+       The dictionary should contain "amp" and "sig" attributes for the amplitude
+       and width of region with higher weighting in IMCOM's error metric.
 
     Attributes
     ----------
