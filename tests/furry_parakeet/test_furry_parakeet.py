@@ -229,7 +229,8 @@ def test_ikernel():
         flat_penalty=flat_penalty,
         choose_outputs="T",
     )
-    T_err = np.sum(ims_alt["T"], axis=-1) - 1.0
+    print(np.shape(ims_alt["T"]))
+    T_err = np.sum(ims_alt["T"], axis=(3, 4, 5)) - 1.0
     print(np.percentile(T_err, 25), np.percentile(T_err, 75))
     print(np.amax(np.abs(T_err)))
     assert np.amax(np.abs(T_err)) < 0.0  # will fail
