@@ -30,7 +30,6 @@ import scipy
 import scipy.fft
 import scipy.signal
 import scipy.special
-from astropy.io import fits
 
 from . import pyimcom_croutines, pyimcom_lakernel
 
