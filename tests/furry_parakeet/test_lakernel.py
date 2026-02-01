@@ -226,6 +226,6 @@ def test_interp():
     print(np.amax(np.abs(fout[2, :] - np.cos(2 * np.pi * pred))))
 
     # See if we got the right answer for the interpolated image and sine wave
-    assert np.amax(np.abs(fout[0, :] - 1)) < 1.0
-    assert np.amax(np.abs(fout[1, :] - pred)) < 1.0
-    assert np.amax(np.abs(fout[2, :] - np.cos(2 * np.pi * pred))) < -1.0e-5
+    assert np.amax(np.abs(fout[0, :] - 1)) < 1.0e-7
+    assert np.amax(np.abs(fout[1, :] - pred)) < 1.0e-7
+    assert np.amax(np.abs(fout[2, :] - np.cos(2 * np.pi * pred))) < 3.0e-4
