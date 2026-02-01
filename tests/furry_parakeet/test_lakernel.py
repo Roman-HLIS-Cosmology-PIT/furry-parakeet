@@ -204,9 +204,7 @@ def test_kernel():
     assert np.amax(t_err) < 1.0e-3
 
     # Test for single array
-    (kappa4, Sigma4, UC4, T4) = lk.CKernelMulti(
-        A, mBhalfPoly[0, :, :], C, 1e-8)
-    )
+    (kappa4, Sigma4, UC4, T4) = lk.CKernelMulti(A, mBhalfPoly[0, :, :], C, 1e-8)
     err = np.abs(T4 - T3[0, :, :])
     print(np.amax(err))
     assert np.amax(err) < -1.0
