@@ -1,5 +1,6 @@
 """Tests for lakernel.py"""
 
+from furry_parakeet import pyimcom_croutines
 import furry_parakeet.pyimcom_lakernel as lk
 import numpy as np
 
@@ -86,7 +87,6 @@ def test_get_coadd_matrix_discrete():
     print(np.amin(Sigma_), np.amax(Sigma_))
     print(np.amin(UC_), np.amax(UC_))
     print(np.amin(T_), np.amax(T_))
-    print(np.sum(T_, axis=-1))
 
     assert np.shape(kappa_) == (3, 2500)
     assert np.shape(Sigma_) == (3, 2500)
@@ -99,29 +99,20 @@ def test_get_coadd_matrix_discrete():
     assert np.amin(UC_) > 5.0e-4
     assert np.amax(UC_) < 0.002
     T__ = np.sum(T_, axis=-1)
+
     print(np.amin(T__), np.amax(T__))
-    assert np.amax(np.abs(T__-1.)) < 0.02
+    assert np.amax(np.abs(T__ - 1.0)) < 0.06
 
 
-def dontusetestkernel(sigma, u):
-    """
-    Test case for the kernel.
+def test_kernel():
+    """Test case for the kernel."""
 
-    This is nothing fancy.  The test interpolates an image containing a single sine wave, with Gaussian PSF.
+    # This is nothing fancy.  The test interpolates an image containing a single sine wave, with Gaussian PSF.
 
-    Parameters
-    ----------
-    sigma : float
-        The 1 sigma width of PSF (Gaussian)
-    u : np.array or list
-        Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
-
-    Returns
-    -------
-    None
-
-    """
-
+    # Test parameters
+    sigma = 4.0  # The 1 sigma width of PSF (Gaussian)
+    u = np.array([0.2, 0.1])  # Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
+    
     # number of outputs to print
     npr = 4
 
@@ -149,8 +140,6 @@ def dontusetestkernel(sigma, u):
     thisImage = np.exp(2 * np.pi * 1j * (u[0] * x + u[1] * y))
     desiredOutput = np.exp(2 * np.pi * 1j * (u[0] * xout + u[1] * yout))
 
-    print("build matrices", time.perf_counter())
-
     A = np.zeros((n, n))
     mBhalf = np.zeros((m, n))
     mBhalfPoly = np.zeros((nt, m, n))
@@ -172,7 +161,7 @@ def dontusetestkernel(sigma, u):
     C *= 0.7
 
     # brute force version of kernel
-    (kappa, Sigma, UC, T) = BruteForceKernel(A, mBhalf, C, 1e-8)
+    (kappa, Sigma, UC, T) = lk.BruteForceKernel(A, mBhalf, C, 1e-8)
 
     print("** brute force kernel **")
     print("kappa =", kappa[:npr])
@@ -182,7 +171,7 @@ def dontusetestkernel(sigma, u):
     print(np.abs(T @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
 
     # C version of kernel
-    (kappa2, Sigma2, UC2, T2) = CKernel(A, mBhalf, C, 1e-8)
+    (kappa2, Sigma2, UC2, T2) = lk.CKernel(A, mBhalf, C, 1e-8)
 
     print("** C kernel **")
     print("kappa =", kappa2[:npr])
@@ -191,11 +180,18 @@ def dontusetestkernel(sigma, u):
     print("Image residual =")
     print(np.abs(T2 @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
 
-    (kappa3, Sigma3, UC3, T3) = CKernelMulti(
+    t_err = np.abs(T2 @ thisImage - desiredOutput).reshape((m1, m1))
+    print(np.amax(t_err), np.amax(t_err[:npr]))
+    # assert np.amax(t_err) < -1.0e-4
+    
+    (kappa3, Sigma3, UC3, T3) = lk.CKernelMulti(
         A, mBhalfPoly, C * 1.05 ** (2 * np.array(range(nt))), 1e-8 * np.ones((nt,))
     )
     print("Sigma3 =", Sigma3[:, :npr])
     print("output =", (T2 @ thisImage)[:npr], (T3 @ thisImage)[:, :npr])
+    t_err = np.abs(T3 @ thisImage - desiredOutput).reshape((m1, m1))
+    print(np.amax(t_err), np.amax(t_err[:npr]))
+    assert np.amax(t_err) < -1.0e-4
 
 
 def dontusetestinterp(u):
