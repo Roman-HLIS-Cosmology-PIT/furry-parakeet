@@ -207,7 +207,7 @@ def test_kernel():
     (kappa4, Sigma4, UC4, T4) = lk.CKernelMulti(A, mBhalfPoly[0, :, :], C, 1e-8)
     err = np.abs(T4 - T3[0, :, :])
     print(np.amax(err))
-    assert np.amax(err) < -1.0
+    assert np.amax(err) < 1.0e-4
 
 
 def test_interp():
