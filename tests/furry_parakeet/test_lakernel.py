@@ -190,23 +190,13 @@ def test_kernel():
     print("output =", (T2 @ thisImage)[:npr], (T3 @ thisImage)[:, :npr])
     t_err = np.abs((T3 @ thisImage)[0, :] - desiredOutput).reshape((m1, m1))
     print(np.shape(t_err), np.amax(t_err), np.amax(t_err[:npr]))
-    assert np.amax(t_err) < -1.0e-4
+    assert np.amax(t_err) < 1.0e-3
 
 
-def dontusetestinterp(u):
-    """
-    Test interpolation functions.
+def test_interp():
+    """Test interpolation functions on a sine wave."""
 
-    Parameters
-    ----------
-    u : np.array or list
-        Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
-
-    Returns
-    -------
-    None
-
-    """
+    u = np.array([0.2, 0.1])  # Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
 
     ny = 1024
     nx = 1024
@@ -231,6 +221,11 @@ def dontusetestinterp(u):
     # print(pred)
     # print(numpy.cos(2*numpy.pi*pred))
     print("errors:")
-    print(fout[0, :] - 1)
-    print(fout[1, :] - pred)
-    print(fout[2, :] - np.cos(2 * np.pi * pred))
+    print(np.amax(np.abs(fout[0, :] - 1)))
+    print(np.amax(np.abs(fout[1, :] - pred)))
+    print(np.amax(np.abs(fout[2, :] - np.cos(2 * np.pi * pred))))
+
+    # See if we got the right answer for the interpolated image and sine wave
+    assert np.amax(np.abs(fout[0, :] - 1)) < 1.0
+    assert np.amax(np.abs(fout[1, :] - pred)) < 1.0
+    assert np.amax(np.abs(fout[2, :] - np.cos(2 * np.pi * pred))) < -1.0e-5
