@@ -10,7 +10,7 @@ def test_evensize():
     """Test exception handling for even sizes in PSF_Overlap."""
 
     try:
-        ovl = pyimcom_interface.PSF_Overlap([], [], 1./6., 64, 0.11)
+        ovl = pyimcom_interface.PSF_Overlap([], [], 1.0 / 6.0, 64, 0.11)
         assert ovl.nsample < 0  # will fail, the above should raise an exception
     except Exception as e:
         print(str(e))
