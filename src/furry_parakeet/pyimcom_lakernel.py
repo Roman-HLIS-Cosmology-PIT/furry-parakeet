@@ -11,12 +11,6 @@ CKernelMulti
     PyIMCOM kernel, generating multiple images.
 get_coadd_matrix_discrete
     PyIMCOM kernel, but built out of a basis of discrete choices in the Lagrange multiplier.
-test_get_coadd_matrix_discrete
-    Test function for get_coadd_matrix_discrete.
-testkernel
-    Test case for the kernel.
-testinterp
-    Test interpolation functions.
 
 """
 
