@@ -103,6 +103,17 @@ def test_get_coadd_matrix_discrete():
     print(np.amin(T__), np.amax(T__))
     assert np.amax(np.abs(T__ - 1.0)) < 0.06
 
+    # test for what happens if A isn't positive definite
+    (kappa2_, Sigma2_, UC2_, T2_) = lk.get_coadd_matrix_discrete(
+        A - 0.005*np.identity(n), mBhalfPoly, C, kappa_array, smax=0.5, ucmin=1.0e-6
+    )
+    print(np.amin(kappa2_), np.amax(kappa2_))
+    assert np.amin(kappa2_) > 0.005
+    assert np.amax(kappa2_) < 0.0
+    T__ = np.sum(T2_, axis=-1)
+    print(np.amin(T__), np.amax(T__))
+    assert np.amax(np.abs(T__ - 1.0)) < 0.06
+
 
 def test_kernel():
     """Test case for the kernel."""
