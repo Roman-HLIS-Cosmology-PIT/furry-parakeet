@@ -1,0 +1,248 @@
+"""Tests for lakernel.py"""
+
+import numpy as np
+import furry_parakeet.pyimcom_lakernel as lk
+
+def test_get_coadd_matrix_discrete():
+    """Test function for get_coadd_matrix_discrete."""
+
+    # number of outputs to print
+    # npr = 4
+
+    # number of layers to test multi-ouptut
+    nt = 3
+
+    sigma = 1.75
+    # u = numpy.array([0.2, 0.1])
+
+    # test grid: interpolate an m1xm1 image from n1xn1
+    m1 = 50
+    n1 = 80
+    n = n1 * n1
+    m = m1 * m1
+
+    x = np.zeros((n,))
+    y = np.zeros((n,))
+    for i in range(n1):
+        y[n1 * i : n1 * i + n1] = i
+        x[i::n1] = i
+    xout = np.zeros((m,))
+    yout = np.zeros((m,))
+    for i in range(m1):
+        yout[m1 * i : m1 * i + m1] = 5 + 0.25 * i
+        xout[i::m1] = 5 + 0.25 * i
+
+    # make sample image
+    # thisImage = numpy.exp(2 * numpy.pi * 1j * (u[0] * x + u[1] * y))
+    # desiredOutput = numpy.exp(2 * numpy.pi * 1j * (u[0] * xout + u[1] * yout))
+
+    A = np.zeros((n, n))
+    mBhalf = np.zeros((m, n))
+    mBhalfPoly = np.zeros((nt, m, n))
+    C = np.ones((nt,))
+    for i in range(n):
+        for j in range(n):
+            A[i, j] = np.exp(-1.0 / sigma**2 * ((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2))
+        for a in range(m):
+            mBhalf[a, i] = np.exp(-1.0 / sigma**2 * ((x[i] - xout[a]) ** 2 + (y[i] - yout[a]) ** 2))
+            for k in range(nt):
+                mBhalfPoly[k, a, i] = np.exp(
+                    -1.0 / sigma**2 / (0.5 + 0.5 * 1.05**k) * ((x[i] - xout[a]) ** 2 + (y[i] - yout[a]) ** 2)
+                )
+    for k in range(nt):
+        C[k] = (1 + 1.05**k) ** 2 / 4.0 / 1.05**k
+
+    # rescale everything
+    A *= 0.7
+    mBhalf *= 0.7
+    mBhalfPoly *= 0.7
+    C *= 0.7
+
+    # fits.PrimaryHDU(A).writeto("A.fits", overwrite=True)
+    # fits.PrimaryHDU(mBhalfPoly).writeto("mBhalf.fits", overwrite=True)
+    print("C=", C)
+
+    kappa_array = np.logspace(-6, -2, 3)
+    print("kappa_array=", kappa_array)
+
+    print("n", n, "m", m, "nt", nt, "nv", np.size(kappa_array))
+
+    t1a = time.perf_counter()
+    print("begin", t1a)
+
+    (kappa_, Sigma_, UC_, T_) = get_coadd_matrix_discrete(A, mBhalfPoly, C, kappa_array, smax=0.5)
+
+    t1b = time.perf_counter()
+    print("get_coadd time", t1b - t1a)
+
+    # print information
+    # fits.PrimaryHDU(T_).writeto("T.fits", overwrite=True)
+    # fits.PrimaryHDU(UC_).writeto("UC.fits", overwrite=True)
+    # fits.PrimaryHDU(Sigma_).writeto("Sigma.fits", overwrite=True)
+    # fits.PrimaryHDU(kappa_).writeto("kappa_ind.fits", overwrite=True)
+
+    print(np.shape(kappa_))
+    print(np.shape(Sigma_))
+    print(np.shape(UC_))
+    print(np.shape(T_))
+    print(np.amin(kappa_), np.amax(kappa_))
+    print(np.amin(Sigma_), np.amax(Sigma_))
+    print(np.amin(UC_), np.amax(UCa_))
+    print(np.amin(T_), np.amax(T_))
+    print(np.sum(T_, axis=-1))
+
+
+def dontusetestkernel(sigma, u):
+    """
+    Test case for the kernel.
+
+    This is nothing fancy.  The test interpolates an image containing a single sine wave, with Gaussian PSF.
+
+    Parameters
+    ----------
+    sigma : float
+        The 1 sigma width of PSF (Gaussian)
+    u : np.array or list
+        Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
+
+    Returns
+    -------
+    None
+
+    """
+
+    # number of outputs to print
+    npr = 4
+
+    # number of layers to test multi-ouptut
+    nt = 3
+
+    # test grid: interpolate an m1xm1 image from n1xn1
+    m1 = 25
+    n1 = 33
+    n = n1 * n1
+    m = m1 * m1
+
+    x = np.zeros((n,))
+    y = np.zeros((n,))
+    for i in range(n1):
+        y[n1 * i : n1 * i + n1] = i
+        x[i::n1] = i
+    xout = np.zeros((m,))
+    yout = np.zeros((m,))
+    for i in range(m1):
+        yout[m1 * i : m1 * i + m1] = 5 + 0.25 * i
+        xout[i::m1] = 5 + 0.25 * i
+
+    # make sample image
+    thisImage = np.exp(2 * np.pi * 1j * (u[0] * x + u[1] * y))
+    desiredOutput = np.exp(2 * np.pi * 1j * (u[0] * xout + u[1] * yout))
+
+    print("build matrices", time.perf_counter())
+
+    A = np.zeros((n, n))
+    mBhalf = np.zeros((m, n))
+    mBhalfPoly = np.zeros((nt, m, n))
+    C = 1.0
+    for i in range(n):
+        for j in range(n):
+            A[i, j] = np.exp(-1.0 / sigma**2 * ((x[i] - x[j]) ** 2 + (y[i] - y[j]) ** 2))
+        for a in range(m):
+            mBhalf[a, i] = np.exp(-1.0 / sigma**2 * ((x[i] - xout[a]) ** 2 + (y[i] - yout[a]) ** 2))
+            for k in range(nt):
+                mBhalfPoly[k, a, i] = np.exp(
+                    -1.0 / (1.05**k * sigma) ** 2 * ((x[i] - xout[a]) ** 2 + (y[i] - yout[a]) ** 2)
+                )
+
+    # rescale everything
+    A *= 0.7
+    mBhalf *= 0.7
+    mBhalfPoly *= 0.7
+    C *= 0.7
+
+    t1a = time.perf_counter()
+    print("kernel, brute force", t1a)
+
+    # brute force version of kernel
+    (kappa, Sigma, UC, T) = BruteForceKernel(A, mBhalf, C, 1e-8)
+
+    print("** brute force kernel **")
+    print("kappa =", kappa[:npr])
+    print("Sigma =", Sigma[:npr])
+    print("UC =", UC[:npr])
+    print("Image residual =")
+    print(np.abs(T @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
+
+    t1b = time.perf_counter()
+    print("kernel, C", t1b)
+
+    # C version of kernel
+    (kappa2, Sigma2, UC2, T2) = CKernel(A, mBhalf, C, 1e-8)
+
+    print("** C kernel **")
+    print("kappa =", kappa2[:npr])
+    print("Sigma =", Sigma2[:npr])
+    print("UC =", UC2[:npr])
+    print("Image residual =")
+    print(np.abs(T2 @ thisImage - desiredOutput).reshape((m1, m1))[:npr])
+
+    t1c = time.perf_counter()
+
+    (kappa3, Sigma3, UC3, T3) = CKernelMulti(
+        A, mBhalfPoly, C * 1.05 ** (2 * np.array(range(nt))), 1e-8 * np.ones((nt,))
+    )
+    print("Sigma3 =", Sigma3[:, :npr])
+    print("output =", (T2 @ thisImage)[:npr], (T3 @ thisImage)[:, :npr])
+
+    t1d = time.perf_counter()
+    print("end -->", t1d)
+
+    print("timing: ", t1b - t1a, t1c - t1b, t1d - t1c)
+
+
+def dontusetestinterp(u):
+    """
+    Test interpolation functions.
+
+    Parameters
+    ----------
+    u : np.array or list
+        Shape (2,). Fourier wave vector of sine wave, (x,y) ordering.
+
+    Returns
+    -------
+    None
+
+    """
+
+    ny = 1024
+    nx = 1024
+    indata = np.zeros((3, ny, nx))
+    indata[0, :, :] = 1.0
+    for ix in range(nx):
+        indata[1, :, ix] = u[0] * ix + u[1] * np.linspace(0, ny - 1, ny)
+    indata[2, :, :] = np.cos(2 * np.pi * indata[1, :, :])
+
+    no = 32768
+    xout = np.linspace(8, 9, no)
+    yout = np.linspace(10, 10.5, no)
+
+    fout = np.zeros((3, no))
+
+    t1a = time.perf_counter()
+    pyimcom_croutines.iD5512C(indata, xout, yout, fout)
+    # pyimcom_croutines.iD5512C(indata[2,:,:].reshape((1,ny,nx)), xout, yout, fout[2,:].reshape((1,no)))
+    t1b = time.perf_counter()
+
+    pred = u[0] * xout + u[1] * yout
+
+    # print(fout)
+    # print(pred)
+    # print(numpy.cos(2*numpy.pi*pred))
+    print("errors:")
+    print(fout[0, :] - 1)
+    print(fout[1, :] - pred)
+    print(fout[2, :] - np.cos(2 * np.pi * pred))
+
+    print(f"timing interp = {t1b-t1a:9.6f} s")
+  
