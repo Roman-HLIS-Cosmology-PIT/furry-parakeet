@@ -15,12 +15,6 @@ shearmatrix
     Makes a shear matrix with unit determinant.
 get_coadd_matrix
     Convert PSF overlap object to transfer matrices.
-test_psf_inject
-    Create input postage stamps of point sources of unit flux and coadd them to test the PSF matrices.
-testairy
-    Simple test function for Airy spot.
-testpsfoverlap
-    Test function for PSF_Overlap class.
 
 Classes
 -------
@@ -36,7 +30,6 @@ import scipy
 import scipy.fft
 import scipy.signal
 import scipy.special
-from astropy.io import fits
 
 from . import pyimcom_croutines, pyimcom_lakernel
 
@@ -310,9 +303,11 @@ class PSF_Overlap:
         The 2x2 distortion matrices associated with the input PSFs (length ``n_in``),
         in the form ``X(stacking frame) = (distortion_matrix[j]) @ X(native frame[j])``.
         Default is no distortion.
-    amp_penalty : float, optional
+    amp_penalty : dict, optional
         Experimental feature to change the weighting of Fourier modes
        (do not use or set to None unless you are trying to do a test with it).
+       The dictionary should contain "amp" and "sig" attributes for the amplitude
+       and width of region with higher weighting in IMCOM's error metric.
 
     Attributes
     ----------
@@ -977,85 +972,3 @@ def test_psf_inject(
 
     diff_array = out_array - target_out_array
     return (in_array, out_array, diff_array)
-
-
-#############################
-### Functions for testing ###
-#############################
-
-
-# simple test for the airy function
-def testairy():
-    """Simple test function for Airy spot."""
-
-    IA = psf_simple_airy(128, 4, tophat_conv=4, sigma=4 * 0.3)
-    print(np.sum(IA))
-    hdu = fits.PrimaryHDU(IA)
-    hdu.writeto("testairy.fits", overwrite=True)
-
-
-# simple test for the PSF overlap function
-def testpsfoverlap():
-    """Test function for PSF_Overlap class."""
-
-    n1 = 256
-    ld = 1.29 / 2.37e6 * 206265 / 0.11
-    nps = 8
-    cd = 0.3
-    Im1 = psf_simple_airy(n1, nps * ld, tophat_conv=nps, sigma=nps * cd)[4:, 4:]
-    Im2 = psf_cplx_airy(n1, nps * ld, tophat_conv=nps, sigma=nps * cd)
-    Im3 = psf_cplx_airy(n1, nps * ld, tophat_conv=nps, sigma=nps * cd)
-    Im4 = psf_cplx_airy(n1, nps * ld, tophat_conv=nps, sigma=nps * cd)
-    Im5 = psf_cplx_airy(n1, nps * ld, tophat_conv=nps, sigma=nps * cd)
-    ImOut = psf_simple_airy(n1, nps * ld, tophat_conv=nps, sigma=6.0)
-
-    s_out = 0.04
-    s_in = 0.11
-
-    t1a = time.perf_counter()
-    P = PSF_Overlap(
-        [Im1, Im2, Im3, Im4, Im5],
-        [ImOut],
-        0.5,
-        511,
-        s_in,
-        distort_matrices=[rotmatrix(0.0), rotmatrix(np.pi / 4.0), rotmatrix(np.pi / 3.0), None, None],
-    )
-    t1b = time.perf_counter()
-    print("timing psf overlap: ", t1b - t1a)
-
-    hdu = fits.PrimaryHDU(P.psf_array)
-    hdu.writeto("testpsf1.fits", overwrite=True)
-    hdu = fits.PrimaryHDU(
-        np.transpose(P.overlaparray, axes=(0, 2, 1, 3)).reshape(P.nsample * P.n_tot, P.nsample * P.n_tot)
-    )
-    hdu.writeto("testpsf2.fits", overwrite=True)
-
-    # and now make a coadd matrix
-    t1c = time.perf_counter()
-    get_coadd_matrix(
-        P,
-        float(nps),
-        [1.0e-8],
-        [(0.055, 0), (0, 0), (0, 0.025), (0, 0), (0, 0.055)],
-        [
-            rotmatrix(0.0),
-            rotmatrix(np.pi / 4.0),
-            rotmatrix(np.pi / 3.0),
-            rotmatrix(0.0),
-            rotmatrix(0.0),
-        ],
-        s_in,
-        (42, 42),
-        s_out,
-        (27, 27),
-        None,
-        0.66,
-    )
-    t1d = time.perf_counter()
-    print("timing coadd matrix: ", t1d - t1c)
-
-
-# only for testing purposes
-# testairy()
-# testpsfoverlap()
