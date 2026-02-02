@@ -1117,7 +1117,7 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
          x = *(double*)PyArray_GETPTR2(coords_, k, 1);
 
          // Clamp tiny negative values to zero (floating point precision issues)
-         const double eps = 1e-9;
+         const double eps = 1e-8;
          if (x < 0 && x > -eps) x = 0.0;
          if (y < 0 && y > -eps) y = 0.0;
 
