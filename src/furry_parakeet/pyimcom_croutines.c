@@ -1095,6 +1095,8 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
     /* make local, flattened versions of arrays*/
     double *image_data = (double*)malloc((size_t)(cols*rows*sizeof(double)));
     double *interp_data = (double*)malloc((size_t)(cols*rows*sizeof(double)));
+    memset(interp_data, 0, cols * rows * sizeof(double));
+
 
     #pragma omp parallel for
     for(long yip=0;yip<rows;yip++) {
@@ -1114,15 +1116,19 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
          y = *(double*)PyArray_GETPTR2(coords_, k, 0);
          x = *(double*)PyArray_GETPTR2(coords_, k, 1);
 
+         // Clamp tiny negative values to zero (floating point precision issues)
+         const double eps = 1e-9;
+         if (x < 0 && x > -eps) x = 0.0;
+         if (y < 0 && y > -eps) y = 0.0;
+
         // Calculate the indices of the four surrounding pixels
          x1 = (long)floor(x);
          y1 = (long)floor(y);
          x2 = x1 + 1;
          y2 = y1 + 1;
 
-        if (x1 < 0 || x2 >= cols || y1 < 0 || y2 >= rows || x1 >= cols || y1 >= rows) {
-            continue; // Skip out-of-bounds; Might want to change this later?
-        }
+         if (x1 < 0 || y1 < 0 || x2 >= cols || y2 >= rows) continue;  // skip pixel if on edge
+
 
         // Compute fractional distances from x1 and y1
          dx = x - x1;
@@ -1245,6 +1251,11 @@ static PyObject *bilinear_transpose (PyObject *self, PyObject *args){
       for (long k = 0; k < num_coords; k++) {
           y = *(double*)PyArray_GETPTR2(coords_, k, 0);
           x = *(double*)PyArray_GETPTR2(coords_, k, 1);
+
+          // Clamp tiny negative values to zero (floating point precision issues)
+          const double eps = 1e-9;
+          if (x < 0 && x > -eps) x = 0.0;
+          if (y < 0 && y > -eps) y = 0.0;          
 
           x1 = (int)floor(x);
           y1 = (int)floor(y);
