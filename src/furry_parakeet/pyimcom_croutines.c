@@ -1252,6 +1252,11 @@ static PyObject *bilinear_transpose (PyObject *self, PyObject *args){
           y = *(double*)PyArray_GETPTR2(coords_, k, 0);
           x = *(double*)PyArray_GETPTR2(coords_, k, 1);
 
+          // Clamp tiny negative values to zero (floating point precision issues)
+          const double eps = 1e-9;
+          if (x < 0 && x > -eps) x = 0.0;
+          if (y < 0 && y > -eps) y = 0.0;          
+
           x1 = (int)floor(x);
           y1 = (int)floor(y);
           x2 = x1 + 1;
