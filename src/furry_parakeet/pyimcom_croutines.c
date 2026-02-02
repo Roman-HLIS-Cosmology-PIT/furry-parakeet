@@ -1116,6 +1116,11 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
          y = *(double*)PyArray_GETPTR2(coords_, k, 0);
          x = *(double*)PyArray_GETPTR2(coords_, k, 1);
 
+         // Clamp tiny negative values to zero (floating point precision issues)
+         const double eps = 1e-9;
+         if (x < 0 && x > -eps) x = 0.0;
+         if (y < 0 && y > -eps) y = 0.0;
+
         // Calculate the indices of the four surrounding pixels
          x1 = (long)floor(x);
          y1 = (long)floor(y);
