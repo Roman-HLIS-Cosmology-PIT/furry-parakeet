@@ -6,6 +6,17 @@ from furry_parakeet import pyimcom_interface
 from numpy.random import RandomState
 
 
+def test_evensize():
+    """Test exception handling for even sizes in PSF_Overlap."""
+
+    try:
+        ovl = pyimcom_interface.PSF_Overlap([], [], 1.0 / 6.0, 64, 0.11)
+        assert ovl.nsample < 0  # will fail, the above should raise an exception
+    except Exception as e:
+        print(str(e))
+        assert str(e) == "error in PSF_Overlap, nsample=64 must be odd"
+
+
 def test_ikernel():
     """General test for furry-parakeet."""
 
@@ -170,6 +181,9 @@ def test_ikernel():
 
     t1a = time.perf_counter()
     P = pyimcom_interface.PSF_Overlap(ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist)
+    P2 = pyimcom_interface.PSF_Overlap(
+        ImIn, ImOut, 0.5, 2 * n1 - 1, s_in, distort_matrices=mlist, amp_penalty={"amp": 0.5, "sig": 0.5}
+    )
     t1b = time.perf_counter()
     output += f"timing psf overlap: {t1b - t1a}\n"
 
@@ -213,8 +227,50 @@ def test_ikernel():
         flat_penalty=flat_penalty,
         choose_outputs="ABCKMSTU",
     )
+    ims_alt = pyimcom_interface.get_coadd_matrix(
+        P,
+        float(nps),
+        [uctarget**2],
+        posoffset,
+        mlist,
+        s_in,
+        (ny_in, nx_in),
+        s_out,
+        (ny_out, nx_out),
+        None,
+        extbdy,
+        smax=1.0 / n_in,
+        flat_penalty=flat_penalty,
+        choose_outputs="T",
+    )
+    print(np.shape(ims_alt["T"]))
+    T_err = np.sum(ims_alt["T"], axis=(3, 4, 5)) - 1.0
+    print(np.percentile(T_err, 25), np.percentile(T_err, 75))
+    print(np.amax(np.abs(T_err)))
+    assert np.amax(np.abs(T_err)) < 0.04
     t1d = time.perf_counter()
     output += f"timing coadd matrix: {t1d - t1c}\n"
+
+    # another alternative, with amp_penalty (hence using P2)
+    ims_alt2 = pyimcom_interface.get_coadd_matrix(
+        P2,
+        float(nps),
+        [uctarget**2],
+        posoffset,
+        mlist,
+        s_in,
+        (ny_in, nx_in),
+        s_out,
+        (ny_out, nx_out),
+        None,
+        extbdy,
+        smax=1.0 / n_in,
+        flat_penalty=flat_penalty,
+        choose_outputs="T",
+    )
+    diff_in_t = np.abs(ims_alt["T"] - ims_alt2["T"])
+    print(np.median(diff_in_t), np.amax(diff_in_t))
+    assert np.amax(diff_in_t) < 0.001
 
     output += f"number of output x input pixels used: {np.shape(ims["mBhalf"])}\n"
     output += f"C = {ims["C"]}\n"
