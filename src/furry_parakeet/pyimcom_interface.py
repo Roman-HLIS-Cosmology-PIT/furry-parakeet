@@ -15,6 +15,10 @@ shearmatrix
     Makes a shear matrix with unit determinant.
 get_coadd_matrix
     Convert PSF overlap object to transfer matrices.
+bilinear_interpolation
+    Forward bilinear interpolation on a grid.
+bilinear_transpose
+    Transpose bilinear interpolation on a grid.
 
 Classes
 -------
@@ -972,3 +976,115 @@ def test_psf_inject(
 
     diff_array = out_array - target_out_array
     return (in_array, out_array, diff_array)
+
+
+###################################################################
+### Now the bilinear interpolation functions used by imdestripe ###
+###################################################################
+
+
+def bilinear_interpolation(inimage, gain, coords, outimage):
+    """
+    Bilinear interpolation.
+
+    The basic idea is (in pseudocode)::
+
+        ``outimage[j, i]`` += interpolation of `inimage` * `gain` to position
+
+        y = coords[j, i, 0]
+        x = coords[j, i, 1]
+
+    Skips a point if (x, y) is off the edge of the image.
+
+    Parameters
+    ----------
+    inimage : np.ndarray of float
+        The input image as a 2D array. Shape ``(nrows, ncols)``.
+    gain : np.ndarray of float
+        The gain map, same shape as `inimage`.
+    coords : np.ndarray of float
+        The coordinate grid, shape ``(nrows * ncols, 2)`` or ``(nrows, ncols, 2)``.
+        The last axis has length 2 (y first, then x).
+    outimage : np.ndarray of float
+        The output image to add to. Same shape as `inimage`.
+
+    Returns
+    -------
+    None
+
+    """
+
+    # figure out whether we want the float32 or float64 function
+    # f64 is a Boolean for whether we need the extra precision
+    f64 = outimage.dtype == np.float64
+    fcn = pyimcom_croutines.bilinear_interpolation if f64 else pyimcom_croutines.bilinear_interpolation32
+    tp = np.float64 if f64 else np.float32
+
+    # get shape
+    (r, c) = np.shape(inimage)
+    if np.shape(outimage) != (r, c):
+        raise ValueError(
+            f"inimage {np.shape(inimage)} and outimage {np.shape(outimage)} have different shapes"
+        )
+
+    fcn(
+        inimage.astype(tp, copy=False),
+        gain.astype(tp, copy=False),
+        r,
+        c,
+        coords.astype(tp, copy=False).reshape((r * c, 2)),
+        r * c,
+        outimage,
+    )
+
+
+def bilinear_transpose(inimage, coords, outimage):
+    """
+    Transpose of bilinear interpolation.
+
+    The basic idea is (in pseudocode)::
+
+        `inimage` at (x, y) interpolated onto ``outimage[j, i]`` by cloud-in-cell
+
+        y = coords[j, i, 0]
+        x = coords[j, i, 1]
+
+    Skips a point if (x, y) is off the edge of the image.
+
+    Parameters
+    ----------
+    inimage : np.ndarray of float
+        The input image as a 2D array. Shape ``(nrows, ncols)``.
+    coords : np.ndarray of float
+        The coordinate grid, shape ``(nrows * ncols, 2)`` or ``(nrows, ncols, 2)``.
+        The last axis has length 2 (y first, then x).
+    outimage : np.ndarray of float
+        The output image to add to. Same shape as `inimage`.
+
+    Returns
+    -------
+    None
+
+    """
+
+    # figure out whether we want the float32 or float64 function
+    # f64 is a Boolean for whether we need the extra precision
+    f64 = outimage.dtype == np.float64
+    fcn = pyimcom_croutines.bilinear_transpose if f64 else pyimcom_croutines.bilinear_transpose32
+    tp = np.float64 if f64 else np.float32
+
+    # get shape
+    (r, c) = np.shape(inimage)
+    if np.shape(outimage) != (r, c):
+        raise ValueError(
+            f"inimage {np.shape(inimage)} and outimage {np.shape(outimage)} have different shapes"
+        )
+
+    fcn(
+        inimage.astype(tp, copy=False),
+        r,
+        c,
+        coords.astype(tp, copy=False).reshape((r * c, 2)),
+        r * c,
+        outimage,
+    )
