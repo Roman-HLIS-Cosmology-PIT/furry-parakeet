@@ -373,15 +373,10 @@ class PSF_Overlap:
             yctr = (ny - 1) / 2.0
 
             # detM = 1.0
-            if distort_matrices is not None:
-                if distort_matrices[ipsf] is not None:
-                    M = np.linalg.inv(distort_matrices[ipsf])
-                    # detM = numpy.linalg.det(M)
-                    xco = M[0, 0] * xo + M[0, 1] * yo
-                    yco = M[1, 0] * xo + M[1, 1] * yo
-                else:
-                    xco = np.copy(xo)
-                    yco = np.copy(yo)
+            if distort_matrices is not None and distort_matrices[ipsf] is not None:
+                M = np.linalg.inv(distort_matrices[ipsf])
+                xco = M[0, 0] * xo + M[0, 1] * yo
+                yco = M[1, 0] * xo + M[1, 1] * yo
             else:
                 xco = np.copy(xo)
                 yco = np.copy(yo)
