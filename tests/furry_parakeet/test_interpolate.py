@@ -1,6 +1,7 @@
 """Tests for interpolation routines."""
 
 import numpy as np
+import pytest
 from furry_parakeet import pyimcom_croutines, pyimcom_interface
 
 
@@ -72,3 +73,26 @@ def test_interp():
     err = np.amax(np.abs(image_orig - image_orig32))
     print(err)
     assert err < 1.0e-4
+
+
+def test_errs():
+    """Check that exceptions are raised."""
+
+    # rows & columns
+    r = 25
+    c = 30
+
+    g = np.ones((r, c))
+    u, v = np.meshgrid(np.arange(c), np.arange(r))
+    image_in = _f(u, v)
+    x = 14.0 + (u + np.sqrt(3) * v) / 2.0 * 0.25
+    y = 12.0 + (np.sqrt(3) * u - v) / 2.0 * 0.25
+    xy = np.zeros((r, c, 2))
+    xy[:, :, 0] = y
+    xy[:, :, 1] = x
+    image_out = np.zeros((r, c))
+
+    with pytest.raises(ValueError):
+        pyimcom_interface.bilinear_interpolation(image_in, g, xy, image_out[:-1, :])
+    with pytest.raises(ValueError):
+        pyimcom_interface.bilinear_transpose(image_out, xy, image_in[:-1, :])
