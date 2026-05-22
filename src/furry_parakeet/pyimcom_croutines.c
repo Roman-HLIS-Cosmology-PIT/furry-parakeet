@@ -1212,8 +1212,8 @@ static PyObject *bilinear_interpolation32(PyObject *self, PyObject *args) {
     }
 
     /* make local, flattened versions of arrays*/
-    float *image_data = (float*)malloc((size_t)(cols*rows*sizeof(double)));
-    float *interp_data = (float*)malloc((size_t)(cols*rows*sizeof(double)));
+    float *image_data = (float*)malloc((size_t)(cols*rows*sizeof(float)));
+    float *interp_data = (float*)malloc((size_t)(cols*rows*sizeof(float)));
     memset(interp_data, 0, cols * rows * sizeof(float));
 
 
@@ -1485,8 +1485,8 @@ static PyObject *bilinear_transpose32(PyObject *self, PyObject *args){
 
     /* Allocate memory for local arrays */
     size_t image_size = (size_t)(rows * cols);
-    float *image_data = (float*)malloc(image_size *  sizeof(double));
-    float *original_data = (float*)malloc(image_size * sizeof(double));
+    float *image_data = (float*)malloc(image_size *  sizeof(float));
+    float *original_data = (float*)malloc(image_size * sizeof(float));
 
     /* Copy input data to local arrays */
     #pragma omp parallel for
@@ -1915,9 +1915,9 @@ static PyMethodDef PyImcom_CMethods[] = {
   {"gridG4460C", (PyCFunction)pyimcom_gridG4460C, METH_VARARGS, "interpolation routine regular grid"},
   {"build_reduced_T_wrap", (PyCFunction)pyimcom_build_reduced_T_wrap, METH_VARARGS, "fast approximate coadd matrix"},
   {"bilinear_interpolation", (PyCFunction)bilinear_interpolation, METH_VARARGS, "Interpolate image B onto image A"},
-  {"bilinear_interpolation32", (PyCFunction)bilinear_interpolation, METH_VARARGS, "Interpolate image B onto image A"},
+  {"bilinear_interpolation32", (PyCFunction)bilinear_interpolation32, METH_VARARGS, "Interpolate image B onto image A"},
   {"bilinear_transpose", (PyCFunction)bilinear_transpose, METH_VARARGS, "Transpose interpolation"},
-  {"bilinear_transpose32", (PyCFunction)bilinear_transpose, METH_VARARGS, "Transpose interpolation"},
+  {"bilinear_transpose32", (PyCFunction)bilinear_transpose32, METH_VARARGS, "Transpose interpolation"},
   /* more functions, if needed */
   {NULL, NULL, 0, NULL} /* end */
 };
