@@ -1052,7 +1052,7 @@ static PyObject *pyimcom_gridG4460C(PyObject *self, PyObject *args) {
  * ====== INTERPOLATION FUNCTIONS FOR DESTRIPING =======
  */
 
- /* Forward interpolation function
+/* Forward interpolation function
  *
  * Inputs:
  * image = pointer to the input image data (image to-be-interpolated; image "B")
@@ -1171,7 +1171,126 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
 } /* end static pyobject bilinear interpolation */
 
 
- /*  Transpose interpolation function
+/* Forward interpolation function (float32 version)
+ *
+ * Inputs:
+ * image = pointer to the input image data (image to-be-interpolated; image "B")
+ * g_eff = pointer to the input image pixel response matrix (image "B" g_eff)
+ * rows, cols = dimensions of the images
+ * coords = pointer to the array of coordinates (x,y) to be interpolated onto (image "A" coords)
+ * num_coords = number of provided coordinate pairs
+
+ *
+ * Outputs:
+ * > interpolated_image = pointer to output array for interpolated values. I_B interpolated onto I_A grid
+ */
+static PyObject *bilinear_interpolation32(PyObject *self, PyObject *args) {
+    long rows, cols, num_coords;
+    PyObject *image, *g_eff, *coords; /*inputs*/
+    PyObject *interpolated_image; /*outputs*/
+    PyArrayObject *image_, *g_eff_, *coords_; /*inputs*/
+    PyArrayObject *interpolated_image_; /*outputs*/
+
+      /* read arguments */
+    if (!PyArg_ParseTuple(args, "O!O!llO!lO!", &PyArray_Type, &image, &PyArray_Type, &g_eff, &rows, &cols,
+    &PyArray_Type, &coords, &num_coords, &PyArray_Type, &interpolated_image)) {
+
+    return(NULL);
+    }
+    /* repackage Python arrays as C objects */
+    image_ = (PyArrayObject*)PyArray_FROM_OTF(image, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+    g_eff_ = (PyArrayObject*)PyArray_FROM_OTF(g_eff, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+    coords_ = (PyArrayObject*)PyArray_FROM_OTF(coords, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+    interpolated_image_ = (PyArrayObject*)PyArray_FROM_OTF(interpolated_image, NPY_FLOAT, NPY_ARRAY_INOUT_ARRAY2);
+
+    if (rows <= 0 || cols <= 0) {
+        char error_msg[200];
+        snprintf(error_msg, sizeof(error_msg),
+                 "Invalid image dimensions: rows=%ld, cols=%ld", rows, cols);
+        PyErr_SetString(PyExc_ValueError, error_msg);
+        return NULL;
+    }
+
+    /* make local, flattened versions of arrays*/
+    float *image_data = (float*)malloc((size_t)(cols*rows*sizeof(float)));
+    float *interp_data = (float*)malloc((size_t)(cols*rows*sizeof(float)));
+    memset(interp_data, 0, cols * rows * sizeof(float));
+
+
+    #pragma omp parallel for
+    for(long yip=0;yip<rows;yip++) {
+        for(long xip=0;xip<cols;xip++) {
+            long ipos = yip * cols + xip;
+            image_data[ipos] = *(float*)PyArray_GETPTR2(image_, yip, xip)
+            * *(float*)PyArray_GETPTR2(g_eff_, yip, xip);
+          }
+    }
+
+    float x, y;
+    long x1, y1, x2, y2;
+    float dx, dy;
+
+    #pragma omp parallel for private(x, y, x1, y1, x2, y2, dx, dy)
+    for (long k = 0; k < num_coords; ++k) { //iterate through coordinate pairs
+         y = *(float*)PyArray_GETPTR2(coords_, k, 0);
+         x = *(float*)PyArray_GETPTR2(coords_, k, 1);
+
+         // Clamp tiny negative values to zero (floating point precision issues)
+         const float eps = 1e-4;
+         if (x < 0 && x > -eps) x = 0.0;
+         if (y < 0 && y > -eps) y = 0.0;
+
+        // Calculate the indices of the four surrounding pixels
+         x1 = (long)floor(x);
+         y1 = (long)floor(y);
+         x2 = x1 + 1;
+         y2 = y1 + 1;
+
+         if (x1 < 0 || y1 < 0 || x2 >= cols || y2 >= rows) continue;  // skip pixel if on edge
+
+
+        // Compute fractional distances from x1 and y1
+         dx = x - x1;
+         dy = y - y1;
+
+        // Compute contributions; image_A_interp[pixel] = (weight)*(image_B[contributing_pixel])*(g_eff_B[contributing_pixel])
+        interp_data[k] =
+            (1. - dx) * (1. - dy) * image_data[y1 * cols + x1]
+            + (1. - dx) * dy * image_data[y2 * cols + x1]
+            + (1. - dy) * dx * image_data[y1 * cols + x2]
+            + dx * dy * image_data[y2 * cols + x2] ;
+
+
+    }  //end iteration over coordinate pairs
+
+    // Copy results back to numpy array
+    #pragma omp parallel for
+    for (long k = 0; k < num_coords; ++k) { //iterate through coordinate pairs
+         long yk = k / cols;
+         long xk = k % cols;
+        *(float*)PyArray_GETPTR2(interpolated_image_, yk, xk) = interp_data[k];
+    }
+
+     /* reference count and resolve */
+
+    free(image_data);
+    free(interp_data);
+
+    Py_DECREF(image_);
+    Py_DECREF(g_eff_);
+    Py_DECREF(coords_);
+    PyArray_ResolveWritebackIfCopy(interpolated_image_);
+    Py_DECREF(interpolated_image_);
+
+
+    Py_INCREF(Py_None);
+
+    return(Py_None);
+
+} /* end static pyobject bilinear interpolation */
+
+
+/*  Transpose interpolation function
  *
  * Inputs:
  * image = pointer to the gradient image data (gradient image to-be-transpose-interpolated; image "gradient_interpolated")
@@ -1184,7 +1303,7 @@ static PyObject *bilinear_interpolation(PyObject *self, PyObject *args) {
  * > original_image = pointer for the output of transpose interpolation (gradient image interpolated onto image "B" grid)
 */
 
-static PyObject *bilinear_transpose (PyObject *self, PyObject *args){
+static PyObject *bilinear_transpose(PyObject *self, PyObject *args){
     long rows, cols, num_coords;
     PyObject *image, *coords; /*inputs*/
     PyObject *original_image; /*outputs*/
@@ -1305,6 +1424,159 @@ static PyObject *bilinear_transpose (PyObject *self, PyObject *args){
         for (long ipx = 0; ipx < cols; ipx++) {
             long ipos = ipy * cols + ipx;
             *(double*)PyArray_GETPTR2(original_image_, ipy, ipx) = original_data[ipos];
+        }
+    }
+
+    /* Clean up */
+    free(image_data);
+    free(original_data);
+
+    /* reference count and resolve */
+    Py_DECREF(image_);
+    Py_DECREF(coords_);
+    PyArray_ResolveWritebackIfCopy(original_image_);
+    Py_DECREF(original_image_);
+
+    Py_INCREF(Py_None);
+
+    return(Py_None);
+}
+
+
+/*  Transpose interpolation function (float32 version)
+ *
+ * Inputs:
+ * image = pointer to the gradient image data (gradient image to-be-transpose-interpolated; image "gradient_interpolated")
+ * rows, cols = dimensions of the image
+ * coords = pointer to the array of coordinates (x,y) to be interpolated onto (image "B" coords)
+ * num_coords = number of provided coordinate pairs
+
+ *
+ * Outputs:
+ * > original_image = pointer for the output of transpose interpolation (gradient image interpolated onto image "B" grid)
+*/
+
+static PyObject *bilinear_transpose32(PyObject *self, PyObject *args){
+    long rows, cols, num_coords;
+    PyObject *image, *coords; /*inputs*/
+    PyObject *original_image; /*outputs*/
+    PyArrayObject *image_, *coords_; /*inputs*/
+    PyArrayObject *original_image_; /*outputs*/
+    PyArrayObject *weight_image_;
+
+      /* read arguments */
+    if (!PyArg_ParseTuple(args, "O!llO!lO!", &PyArray_Type, &image, &rows, &cols,
+    &PyArray_Type, &coords, &num_coords, &PyArray_Type, &original_image)) {
+
+    return(NULL);
+    }
+    /* repackage Python arrays as C objects */
+    image_ = (PyArrayObject*)PyArray_FROM_OTF(image, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+    coords_ = (PyArrayObject*)PyArray_FROM_OTF(coords, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+    original_image_ = (PyArrayObject*)PyArray_FROM_OTF(original_image, NPY_FLOAT, NPY_ARRAY_INOUT_ARRAY2);
+
+    if (rows <= 0 || cols <= 0) {
+        char error_msg[200];
+        snprintf(error_msg, sizeof(error_msg),
+                 "Invalid image dimensions: rows=%ld, cols=%ld", rows, cols);
+        PyErr_SetString(PyExc_ValueError, error_msg);
+        return NULL;
+    }
+
+    /* Allocate memory for local arrays */
+    size_t image_size = (size_t)(rows * cols);
+    float *image_data = (float*)malloc(image_size *  sizeof(float));
+    float *original_data = (float*)malloc(image_size * sizeof(float));
+
+    /* Copy input data to local arrays */
+    #pragma omp parallel for
+    for(long yip=0;yip<rows;yip++) {
+        for(long xip=0;xip<cols;xip++) {
+            long ipos = yip * cols + xip;
+            image_data[ipos] = *(float*)PyArray_GETPTR2(image_, yip, xip);
+          }
+    }
+
+    int num_threads;
+    float **thread_buffers;
+
+    #pragma omp parallel
+    {
+      #pragma omp single
+      {
+        num_threads = omp_get_num_threads();
+        thread_buffers = (float**)malloc(num_threads * sizeof(float*));
+        for (int t = 0; t < num_threads; t++) {
+            thread_buffers[t] = (float*)calloc(image_size, sizeof(float));
+        }
+      }
+      
+      int tid = omp_get_thread_num();
+      float *local_buffer = thread_buffers[tid];
+
+      float x, y;
+      long x1, y1, x2, y2;
+      float dx, dy;
+      float w11, w21, w12, w22;
+
+      #pragma omp for
+      for (long k = 0; k < num_coords; k++) {
+          y = *(float*)PyArray_GETPTR2(coords_, k, 0);
+          x = *(float*)PyArray_GETPTR2(coords_, k, 1);
+
+          // Clamp tiny negative values to zero (floating point precision issues)
+          const float eps = 1e-4;
+          if (x < 0 && x > -eps) x = 0.0;
+          if (y < 0 && y > -eps) y = 0.0;          
+
+          x1 = (int)floor(x);
+          y1 = (int)floor(y);
+          x2 = x1 + 1;
+          y2 = y1 + 1;
+
+          if (x1 < 0 || x2 >= cols || y1 < 0 || y2 >= rows) {
+              continue; // Skip out-of-bounds
+          }
+
+          // Compute fractional distances from x1 and y1
+          dx = x - x1;
+          dy = y - y1;
+
+          // Weights
+          w11 = (1 - dx) * (1 - dy);
+          w21 = (1 - dx) * dy;
+          w12 = dx * (1 - dy);
+          w22 = dx * dy;
+
+          // Accumulate contributions based on weights
+          local_buffer[y1 * cols + x1] += w11 * image_data[k];
+          local_buffer[y1 * cols + x2] += w12 * image_data[k];
+          local_buffer[y2 * cols + x1] += w21 * image_data[k];
+          local_buffer[y2 * cols + x2] += w22 * image_data[k];
+      } // end k loop
+    } // end parallel region
+
+    #pragma omp parallel for
+    for (size_t i = 0; i < image_size; i++) {
+      float sum = 0.0;
+      for (int t = 0; t < num_threads; t++) {
+          sum += thread_buffers[t][i];
+      }
+      original_data[i] = sum;
+    }
+
+    /* Clean up thread buffers */
+    for (int t=0; t < num_threads; t++) {
+      free(thread_buffers[t]);
+    }
+    free(thread_buffers);
+
+    /* Copy back to numpy arrays */
+    #pragma omp parallel for
+    for (long ipy = 0; ipy < rows; ipy++) {
+        for (long ipx = 0; ipx < cols; ipx++) {
+            long ipos = ipy * cols + ipx;
+            *(float*)PyArray_GETPTR2(original_image_, ipy, ipx) = original_data[ipos];
         }
     }
 
@@ -1643,7 +1915,9 @@ static PyMethodDef PyImcom_CMethods[] = {
   {"gridG4460C", (PyCFunction)pyimcom_gridG4460C, METH_VARARGS, "interpolation routine regular grid"},
   {"build_reduced_T_wrap", (PyCFunction)pyimcom_build_reduced_T_wrap, METH_VARARGS, "fast approximate coadd matrix"},
   {"bilinear_interpolation", (PyCFunction)bilinear_interpolation, METH_VARARGS, "Interpolate image B onto image A"},
+  {"bilinear_interpolation32", (PyCFunction)bilinear_interpolation32, METH_VARARGS, "Interpolate image B onto image A"},
   {"bilinear_transpose", (PyCFunction)bilinear_transpose, METH_VARARGS, "Transpose interpolation"},
+  {"bilinear_transpose32", (PyCFunction)bilinear_transpose32, METH_VARARGS, "Transpose interpolation"},
   /* more functions, if needed */
   {NULL, NULL, 0, NULL} /* end */
 };
