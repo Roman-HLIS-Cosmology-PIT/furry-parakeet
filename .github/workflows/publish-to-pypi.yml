@@ -25,32 +25,47 @@ jobs:
       matrix:
         include:
           - os: linux-intel
+            platform: linux
             python-version: 3.12
             runs-on: ubuntu-latest
           - os: linux-arm
+            platform: linux
             python-version: 3.12
             runs-on: ubuntu-24.04-arm
           - os: macos-intel
+            platform: macos
             python-version: 3.12
             runs-on: macos-15-intel
           - os: linux-intel
+            platform: linux
             python-version: 3.13
             runs-on: ubuntu-latest
           - os: linux-arm
+            platform: linux
             python-version: 3.13
             runs-on: ubuntu-24.04-arm
           - os: macos-intel
+            platform: macos
             python-version: 3.13
+            runs-on: macos-15-intel
+          - os: linux-intel
+            platform: linux
+            python-version: 3.14
+            runs-on: ubuntu-latest
+          - os: linux-arm
+            platform: linux
+            python-version: 3.14
+            runs-on: ubuntu-24.04-arm
+          - os: macos-intel
+            platform: macos
+            python-version: 3.14
             runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v6
       - name: Install OpenMP-enabled Clang
         if: matrix.os == 'macos-intel'
         run: |
-          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
           brew install llvm libomp
-          echo "CC=/usr/local/opt/llvm/bin/clang" >> $GITHUB_ENV
-          echo "CXX=/usr/local/opt/llvm/bin/clang++" >> $GITHUB_ENV
       - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
         uses: actions/setup-python@v6
         with:
@@ -61,11 +76,18 @@ jobs:
         uses: pypa/cibuildwheel@v3.4.1
         env:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
-          CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
+          CIBW_ARCHS: auto
+          CIBW_OUTPUT_DIR: dist
+          CIBW_ENVIRONMENT_MACOS: >
+            MACOSX_DEPLOYMENT_TARGET=14.0
+            CC="/usr/local/opt/llvm/bin/clang"
+            CXX="/usr/local/opt/llvm/bin/clang++"
+            LDFLAGS="-L/usr/local/opt/llvm/lib"
+            CPPFLAGS="-I/usr/local/opt/llvm/include"
       - uses: actions/upload-artifact@v7
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: ./wheelhouse/*.whl
+          path: dist/*.whl
 
   build_sdist:
     name: Build source distribution
@@ -91,4 +113,7 @@ jobs:
           pattern: cibw-*
           path: dist
           merge-multiple: true
+      - name: Check package distributions via Twine
+        run: |
+          pipx run twine check dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1
