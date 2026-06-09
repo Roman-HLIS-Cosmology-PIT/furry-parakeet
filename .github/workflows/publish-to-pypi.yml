@@ -1,119 +1,159 @@
+# This is modeled based on the GalSim PyPI workflow.
 
-# This workflow will upload a Python Package using Twine when a release is created
-# For more information see: https://github.com/pypa/gh-action-pypi-publish#trusted-publishing
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Upload Python Package
+name: Build wheels and sdist and upload to PyPI
 
 on:
   workflow_dispatch:
   release:
     types: [published]
 
-permissions:
-  contents: read
-
 jobs:
-  build_wheels:
-    name: Build wheels for ${{ matrix.os }} Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.runs-on }}
-    strategy:
-      matrix:
-        include:
-          - os: linux-intel
-            platform: linux
-            python-version: 3.12
-            runs-on: ubuntu-latest
-          - os: linux-arm
-            platform: linux
-            python-version: 3.12
-            runs-on: ubuntu-24.04-arm
-          - os: macos-intel
-            platform: macos
-            python-version: 3.12
-            runs-on: macos-15-intel
-          - os: linux-intel
-            platform: linux
-            python-version: 3.13
-            runs-on: ubuntu-latest
-          - os: linux-arm
-            platform: linux
-            python-version: 3.13
-            runs-on: ubuntu-24.04-arm
-          - os: macos-intel
-            platform: macos
-            python-version: 3.13
-            runs-on: macos-15-intel
-          - os: linux-intel
-            platform: linux
-            python-version: 3.14
-            runs-on: ubuntu-latest
-          - os: linux-arm
-            platform: linux
-            python-version: 3.14
-            runs-on: ubuntu-24.04-arm
-          - os: macos-intel
-            platform: macos
-            python-version: 3.14
-            runs-on: macos-15-intel
+  build_linux_wheels:
+    name: Build wheels on standard linux
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - name: Install OpenMP-enabled Clang
-        if: matrix.os == 'macos-intel'
-        run: |
-          brew install llvm libomp
-      - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Clean build artifacts
-        run: rm -rf build dist
-      - name: Build wheels pypa step on ${{ matrix.os }} Python ${{ matrix.python-version }}
-        uses: pypa/cibuildwheel@v3.4.1
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.3.1
         env:
-          CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
-          CIBW_ARCHS: auto
-          CIBW_OUTPUT_DIR: dist
-          CIBW_ENVIRONMENT_MACOS: >
-            MACOSX_DEPLOYMENT_TARGET=14.0
-            CC="/usr/local/opt/llvm/bin/clang"
-            CXX="/usr/local/opt/llvm/bin/clang++"
-            LDFLAGS="-L/usr/local/opt/llvm/lib"
-            CPPFLAGS="-I/usr/local/opt/llvm/include"
-      - uses: actions/upload-artifact@v7
+          CIBW_BUILD: "*manylinux*"
+          CIBW_ARCHS: auto64
+          CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
+          # I think yum might always work here.  But leave all options available.
+          CIBW_BEFORE_ALL: |
+            yum install -y fftw-devel || apt-get update && apt-get install -y libfftw3-dev || apk add --upgrade fftw-dev
+            yum install -y libgomp || apt-get update && apt-get install -y libgomp1 || apk add --upgrade openmp
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: dist/*.whl
+          name: whl-linux
+          path: ./wheelhouse/*.whl
+
+  build_musl_wheels:
+    name: Build wheels on musl linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.3.1
+        env:
+          CIBW_BUILD: "*musllinux*"
+          CIBW_ARCHS: auto64
+          CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
+          # I think musl always uses apk, but keep all options available.
+          CIBW_BEFORE_ALL: |
+            apk add --upgrade fftw-dev || apt-get update && apt-get install -y libfftw3-dev || yum install -y fftw-devel
+            apk add --upgrade openmp || apt-get update && apt-get install -y libgomp1 || yum install -y libgomp
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whl-musl
+          path: ./wheelhouse/*.whl
+
+  build_macosx_intel_wheels:
+    name: Build wheels on MacOS Intel
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.3.1
+        env:
+          CIBW_BUILD: "*macosx*"
+          CIBW_ARCHS: auto64
+          CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
+          CIBW_BEFORE_ALL: brew install fftw libomp || true
+          CIBW_ENVIRONMENT: >-
+            MACOSX_DEPLOYMENT_TARGET=14.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whl-macos
+          path: ./wheelhouse/*.whl
+
+  build_macosx_arm_wheels:
+    name: Build wheels on MacOS ARM
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.3.1
+        env:
+          CIBW_BUILD: "*macosx*"
+          CIBW_ARCHS: arm64
+          CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
+          CIBW_BEFORE_ALL: brew install fftw libomp eigen
+          CIBW_ENVIRONMENT: >-
+            FFTW_DIR="/opt/homebrew/lib"
+            MACOSX_DEPLOYMENT_TARGET=14.0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whl-arm
+          path: ./wheelhouse/*.whl
 
   build_sdist:
-    name: Build source distribution
+    name: Build sdist and upload to PyPI
+    needs: [build_linux_wheels, build_musl_wheels, build_macosx_intel_wheels, build_macosx_arm_wheels]
+    # Just need to build sdist on a single machine
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Build sdist
-        run: pipx run build --sdist
-      - uses: actions/upload-artifact@v7
-        with:
-          name: cibw-sdist
-          path: dist/*.tar.gz
 
-  upload_pypi:
-    needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    environment: pypi
+    environment:
+      name: pypi
+      url: https://pypi.org/p/furry-parakeet
     permissions:
       id-token: write
+
     steps:
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: cibw-*
-          path: dist
-          merge-multiple: true
-      - name: Check package distributions via Twine
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+
+      - name: Install fftw
         run: |
-          pipx run twine check dist/*
-      - uses: pypa/gh-action-pypi-publish@release/v1
+          sudo -H apt update -y
+          sudo -H apt install -y libfftw3-dev
+          sudo -H apt install -y libgomp1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          pip install -U numpy setuptools
+          pip install -U -r requirements.txt
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: ./wheels
+          pattern: whl-*
+          merge-multiple: true
+
+      - name: Build sdist
+        run: |
+          python setup.py sdist
+          ls -l dist
+          tar tvfz dist/*.tar.gz
+
+      - name: Copy wheels
+        run: |
+          echo ls -l wheels
+          ls -l wheels
+          cp wheels/*.whl dist
+          echo ls -l dist
+          ls -l dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+            verbose: true
