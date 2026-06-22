@@ -72,6 +72,8 @@ jobs:
           CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
           CIBW_BEFORE_ALL: brew install fftw libomp || true
           CIBW_ENVIRONMENT: >-
+            CFLAGS="-I/usr/local/include"
+            LDFLAGS="-L/usr/local/lib"
             MACOSX_DEPLOYMENT_TARGET=14.0
 
       - uses: actions/upload-artifact@v4
