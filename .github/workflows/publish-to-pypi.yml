@@ -23,9 +23,13 @@ jobs:
           CIBW_ARCHS: auto64
           CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
           CIBW_BEFORE_ALL: |
-            apt-get update
-            apt-get install -y libfftw3-dev
-            apt-get install -y libgomp1
+            if command -v dnf &> /dev/null; then
+              dnf install -y fftw-devel libgomp
+            elif command -v yum &> /dev/null; then
+              yum install -y fftw-devel libgomp
+            else
+              echo "No compatible package manager found" && exit 1
+            fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -71,9 +75,11 @@ jobs:
           CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
           CIBW_BEFORE_ALL: brew install fftw libomp || true
           CIBW_ENVIRONMENT: >-
-            CFLAGS="-I/usr/local/include -Xpreprocessor -fopenmp"
-            CXXFLAGS="-I/usr/local/include -Xpreprocessor -fopenmp"
-            LDFLAGS="-L/usr/local/lib -lomp"
+            CC="/usr/local/opt/llvm/bin/clang"
+            CXX="/usr/local/opt/llvm/bin/clang++"
+            CFLAGS="-I/usr/local/include -I/usr/local/opt/llvm/include"
+            CXXFLAGS="-I/usr/local/include -I/usr/local/opt/llvm/include"
+            LDFLAGS="-L/usr/local/lib -L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
             MACOSX_DEPLOYMENT_TARGET=14.0
 
       - uses: actions/upload-artifact@v4
@@ -97,10 +103,12 @@ jobs:
           CIBW_SKIP: cp38* cp39* cp310* cp311* pp*
           CIBW_BEFORE_ALL: brew install fftw libomp eigen
           CIBW_ENVIRONMENT: >-
+            CC="/opt/homebrew/opt/llvm/bin/clang"
+            CXX="/opt/homebrew/opt/llvm/bin/clang++"
             FFTW_DIR="/opt/homebrew/lib"
-            CFLAGS="-I/opt/homebrew/include -Xpreprocessor -fopenmp"
-            CXXFLAGS="-I/opt/homebrew/include -Xpreprocessor -fopenmp"
-            LDFLAGS="-L/opt/homebrew/lib -lomp"
+            CFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/llvm/include"
+            CXXFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/llvm/include"
+            LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/llvm/lib -Wl,-rpath,/opt/homebrew/opt/llvm/lib"
             MACOSX_DEPLOYMENT_TARGET=14.0
 
       - uses: actions/upload-artifact@v4
