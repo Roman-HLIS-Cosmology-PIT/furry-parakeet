@@ -7,9 +7,6 @@ on:
   release:
     types: [published]
 
-env:
-  SETUPTOOLS_SCM_LOCAL_SCHEME_FOR_FURRY_PARAKEET: "no-local-version"
-
 jobs:
   build_linux_wheels:
     name: Build wheels on standard linux
