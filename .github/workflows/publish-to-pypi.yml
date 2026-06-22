@@ -7,13 +7,17 @@ on:
   release:
     types: [published]
 
+env:
+  SETUPTOOLS_SCM_LOCAL_SCHEME: "no-local-version"
+
 jobs:
   build_linux_wheels:
     name: Build wheels on standard linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
 
       - name: Build wheels
@@ -41,7 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
 
       - name: Build wheels
@@ -64,7 +69,8 @@ jobs:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
 
       - name: Build wheels
@@ -92,7 +98,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
 
       - name: Build wheels
