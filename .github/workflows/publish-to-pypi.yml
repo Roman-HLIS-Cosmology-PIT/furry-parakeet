@@ -32,7 +32,7 @@ jobs:
               echo "No compatible package manager found" && exit 1
             fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: whl-linux
           path: ./wheelhouse/*.whl
@@ -56,7 +56,7 @@ jobs:
             apk add --upgrade fftw-dev
             apk add --upgrade openmp
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: whl-musl
           path: ./wheelhouse/*.whl
@@ -85,7 +85,7 @@ jobs:
             LDFLAGS="-L/usr/local/lib -L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
             MACOSX_DEPLOYMENT_TARGET=14.0
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: whl-macos
           path: ./wheelhouse/*.whl
@@ -115,7 +115,7 @@ jobs:
             LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/llvm/lib -Wl,-rpath,/opt/homebrew/opt/llvm/lib"
             MACOSX_DEPLOYMENT_TARGET=14.0
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: whl-arm
           path: ./wheelhouse/*.whl
