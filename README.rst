@@ -1,6 +1,6 @@
 |badge1| |badge2|
 
-.. |badge1| image:: https://codecov.io/github/Roman-HLIS-Cosmology-PIT/furry-parakeet/graph/badge.svg?token=K33BI5YAKV
+.. |badge1| image:: https://codecov.io/github/Roman-HLIS-Cosmology-PIT/furry-parakeet/graph/badge.svg
 
 .. |badge2| image:: https://github.com/Roman-HLIS-Cosmology-PIT/furry-parakeet/actions/workflows/smoke-test.yml/badge.svg
 
